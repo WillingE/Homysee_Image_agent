@@ -76,9 +76,10 @@ serve(async (req) => {
 - 提供具体的编辑建议
 
 如果需要处理图片，调用image_processing函数，参数包括：
-- original_image_url: 原图片URL（从消息中提取）
-- prompt: 编辑指令（用英文描述）
+- prompt: 编辑指令（用英文描述，比如"remove background", "change to sunset", "add a dog"）
 - conversation_id: 当前对话ID
+
+注意：不需要提供原图片URL，系统会自动从对话历史中找到最新上传的图片。
 
 请用中文回复用户。`;
 
@@ -92,10 +93,6 @@ serve(async (req) => {
           parameters: {
             type: 'object',
             properties: {
-              original_image_url: {
-                type: 'string',
-                description: '原图片的URL'
-              },
               prompt: {
                 type: 'string',
                 description: '图片编辑的英文指令，比如"remove background", "change to sunset", "add a dog"'
@@ -105,7 +102,7 @@ serve(async (req) => {
                 description: '当前对话ID'
               }
             },
-            required: ['original_image_url', 'prompt', 'conversation_id']
+            required: ['prompt', 'conversation_id']
           }
         }
       }
@@ -146,31 +143,33 @@ serve(async (req) => {
       
       if (toolCall.function.name === 'image_processing') {
         const args = JSON.parse(toolCall.function.arguments);
+        console.log("🔧 Image processing tool called with args:", args);
         
-        // 🔍 从对话历史中提取最近的图片URL
-        let actualImageUrl = args.original_image_url;
+        // 🔍 直接从数据库查询最新的带图片的消息
+        console.log("🔍 Searching for recent images in conversation:", conversationId);
+        const { data: recentImages, error: imageQueryError } = await supabase
+          .from('chat_messages')
+          .select('image_url, created_at, content')
+          .eq('conversation_id', conversationId)
+          .not('image_url', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(5);
         
-        // 如果URL不是有效的HTTP/HTTPS链接，从对话历史中寻找
-        if (!actualImageUrl || !actualImageUrl.startsWith('http')) {
-          console.log("Original image URL invalid, searching conversation history...");
-          
-          // 从最新的消息开始倒序查找包含图片的消息
-          for (let i = messages.length - 1; i >= 0; i--) {
-            const message = messages[i];
-            if (message.image_url && message.image_url.startsWith('http')) {
-              actualImageUrl = message.image_url;
-              console.log("Found image URL from message history:", actualImageUrl);
+        if (imageQueryError) {
+          console.error("❌ Error querying recent images:", imageQueryError);
+        } else {
+          console.log("📋 Found recent images:", recentImages);
+        }
+        
+        let actualImageUrl = null;
+        
+        // 查找最新的有效图片URL
+        if (recentImages && recentImages.length > 0) {
+          for (const imageMessage of recentImages) {
+            if (imageMessage.image_url && imageMessage.image_url.startsWith('http')) {
+              actualImageUrl = imageMessage.image_url;
+              console.log("✅ Found valid image URL from database:", actualImageUrl);
               break;
-            }
-            
-            // 如果消息内容包含"已上传图片："，提取URL
-            if (message.content.includes('已上传图片：')) {
-              const urlMatch = message.content.match(/已上传图片：(https?:\/\/[^\s\n]+)/);
-              if (urlMatch && urlMatch[1]) {
-                actualImageUrl = urlMatch[1];
-                console.log("Extracted image URL from message content:", actualImageUrl);
-                break;
-              }
             }
           }
         }
