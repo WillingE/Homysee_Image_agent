@@ -42,9 +42,14 @@ serve(async (req) => {
     })) || [];
 
     // 添加当前用户消息
+    let currentMessage = userMessage;
+    if (imageUrl) {
+      currentMessage += `\n\n已上传图片：${imageUrl}`;
+    }
+    
     conversationHistory.push({
       role: 'user',
-      content: userMessage
+      content: currentMessage
     });
 
     // 定义AI Agent的system prompt
@@ -54,10 +59,14 @@ serve(async (req) => {
 2. 分析用户是否需要图片处理服务
 3. 如果用户提到图片编辑、修改、生成等需求，使用image_processing工具
 
-用户上传图片时，主动询问他们想要什么样的编辑效果。
+当用户上传图片时（消息中包含"已上传图片："），你应该：
+- 确认收到图片
+- 分析可能的编辑选项（如：背景更换、物体移除、风格转换、添加元素等）
+- 询问用户具体想要什么编辑效果
+- 提供具体的编辑建议
 
 如果需要处理图片，调用image_processing函数，参数包括：
-- original_image_url: 原图片URL
+- original_image_url: 原图片URL（从消息中提取）
 - prompt: 编辑指令（用英文描述）
 - conversation_id: 当前对话ID
 
