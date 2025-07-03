@@ -1,5 +1,8 @@
-import { useAuth } from '@/hooks/useAuth';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { Card } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,10 +14,12 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-chat-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-8 h-8 border-2 border-ai-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-muted-foreground">正在验证身份...</p>
-        </div>
+        <Card className="bg-chat-surface border-message-border p-8">
+          <div className="flex items-center justify-center space-x-3">
+            <Loader2 className="w-6 h-6 animate-spin text-ai-primary" />
+            <span className="text-foreground">加载中...</span>
+          </div>
+        </Card>
       </div>
     );
   }

@@ -1,70 +1,74 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Sparkles, User, Mail, Lock } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Navigate } from 'react-router-dom';
-import { Sparkles, Zap } from 'lucide-react';
 
 const Auth = () => {
-  const { user, signIn, signUp } = useAuth();
-  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const { signIn, signUp, user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  // 如果用户已登录，重定向到主页
-  if (user) {
-    return <Navigate to="/" replace />;
-  }
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
-  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    
+    setError('');
+
     const { error } = await signIn(email, password);
     
     if (error) {
+      setError(error.message);
       toast({
-        title: "登录失败",
+        title: '登录失败',
         description: error.message,
-        variant: "destructive"
+        variant: 'destructive'
       });
     } else {
       toast({
-        title: "登录成功",
-        description: "欢迎回到 AI 智能修图助手"
+        title: '登录成功',
+        description: '欢迎回来！'
       });
     }
     
     setLoading(false);
   };
 
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    
-    const { error } = await signUp(email, password);
+    setError('');
+
+    const { error } = await signUp(email, password, username);
     
     if (error) {
+      setError(error.message);
       toast({
-        title: "注册失败",
+        title: '注册失败',
         description: error.message,
-        variant: "destructive"
+        variant: 'destructive'
       });
     } else {
       toast({
-        title: "注册成功",
-        description: "请查看邮箱确认账户"
+        title: '注册成功',
+        description: '请检查邮箱确认账户'
       });
     }
     
@@ -75,110 +79,147 @@ const Auth = () => {
     <div className="min-h-screen bg-chat-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-ai-primary to-ai-secondary flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-ai-primary to-ai-secondary flex items-center justify-center">
+              <Sparkles className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">AI 智能修图</h1>
           </div>
-          <p className="text-muted-foreground">
-            智能对话，精准修图，让创意触手可及
-          </p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">AI智能修图助手</h1>
+          <p className="text-muted-foreground">开始您的AI图像编辑之旅</p>
         </div>
 
-        <Card className="bg-chat-surface border-message-border shadow-shadow-elegant">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center text-foreground">欢迎使用</CardTitle>
-            <CardDescription className="text-center text-muted-foreground">
-              请登录或注册开始您的智能修图之旅
-            </CardDescription>
+        <Card className="bg-chat-surface border-message-border">
+          <CardHeader>
+            <CardTitle className="text-center text-foreground">账户登录</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-muted">
-                <TabsTrigger value="signin" className="data-[state=active]:bg-ai-primary data-[state=active]:text-white">
-                  登录
-                </TabsTrigger>
-                <TabsTrigger value="signup" className="data-[state=active]:bg-ai-primary data-[state=active]:text-white">
-                  注册
-                </TabsTrigger>
+            <Tabs defaultValue="signin">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signin">登录</TabsTrigger>
+                <TabsTrigger value="signup">注册</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="signin" className="space-y-4">
+              <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">邮箱</Label>
+                    <Label htmlFor="signin-email" className="flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      邮箱
+                    </Label>
                     <Input
                       id="signin-email"
-                      name="email"
                       type="email"
-                      placeholder="输入您的邮箱"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="请输入邮箱"
                       required
-                      className="bg-background border-border focus:border-ai-primary"
+                      className="bg-input border-message-border"
                     />
                   </div>
+                  
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">密码</Label>
+                    <Label htmlFor="signin-password" className="flex items-center gap-2">
+                      <Lock className="w-4 h-4" />
+                      密码
+                    </Label>
                     <Input
                       id="signin-password"
-                      name="password"
                       type="password"
-                      placeholder="输入您的密码"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="请输入密码"
                       required
-                      className="bg-background border-border focus:border-ai-primary"
+                      className="bg-input border-message-border"
                     />
                   </div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    variant="ai"
+
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-gradient-to-r from-ai-primary to-ai-secondary hover:from-ai-primary-dark hover:to-ai-secondary/80"
                     disabled={loading}
                   >
-                    {loading ? "登录中..." : "登录"}
-                    <Zap className="w-4 h-4 ml-2" />
+                    {loading ? '登录中...' : '登录'}
                   </Button>
                 </form>
               </TabsContent>
               
-              <TabsContent value="signup" className="space-y-4">
+              <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">邮箱</Label>
+                    <Label htmlFor="signup-username" className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      用户名
+                    </Label>
+                    <Input
+                      id="signup-username"
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="请输入用户名"
+                      className="bg-input border-message-border"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email" className="flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      邮箱
+                    </Label>
                     <Input
                       id="signup-email"
-                      name="email"
                       type="email"
-                      placeholder="输入您的邮箱"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="请输入邮箱"
                       required
-                      className="bg-background border-border focus:border-ai-primary"
+                      className="bg-input border-message-border"
                     />
                   </div>
+                  
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">密码</Label>
+                    <Label htmlFor="signup-password" className="flex items-center gap-2">
+                      <Lock className="w-4 h-4" />
+                      密码
+                    </Label>
                     <Input
                       id="signup-password"
-                      name="password"
                       type="password"
-                      placeholder="设置密码 (至少6位)"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="请输入密码（至少6位）"
                       required
-                      minLength={6}
-                      className="bg-background border-border focus:border-ai-primary"
+                      className="bg-input border-message-border"
                     />
                   </div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    variant="ai"
+
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-gradient-to-r from-ai-primary to-ai-secondary hover:from-ai-primary-dark hover:to-ai-secondary/80"
                     disabled={loading}
                   >
-                    {loading ? "注册中..." : "注册账户"}
-                    <Sparkles className="w-4 h-4 ml-2" />
+                    {loading ? '注册中...' : '注册'}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
+
+        <div className="text-center mt-6 text-sm text-muted-foreground">
+          <p>登录即表示您同意我们的服务条款和隐私政策</p>
+        </div>
       </div>
     </div>
   );
