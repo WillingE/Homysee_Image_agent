@@ -189,7 +189,7 @@ serve(async (req) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              original_image_url: actualImageUrl,  // 使用正确的图片URL
+              original_image_url: actualImageUrl,  // 使用从数据库查询到的正确图片URL
               prompt: args.prompt,
               conversation_id: conversationId,
               user_id: userId
