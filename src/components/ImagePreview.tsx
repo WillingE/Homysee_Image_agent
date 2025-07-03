@@ -4,44 +4,92 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Download, Share, Sparkles, Heart } from 'lucide-react';
+import { Download, Share, Sparkles, Heart, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useConversations } from '@/hooks/useConversations';
+import { useToast } from '@/hooks/use-toast';
+import JSZip from 'jszip';
 
 interface ImagePreviewProps {
   className?: string;
 }
 
 const ImagePreview = ({ className }: ImagePreviewProps) => {
-  const { 
+  const {
     currentConversation,
     favoriteImages,
     isImageProcessing,
-    imageProcessingProgress
+    imageProcessingProgress,
+    unfavoriteImage,
   } = useConversations();
-  
+
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isZipping, setIsZipping] = useState(false);
+  const { toast } = useToast();
 
   const handleDownload = (imageUrl: string) => {
     const link = document.createElement('a');
     link.href = imageUrl;
-    link.download = 'favorite-image.jpg';
+    link.download = `image_${Date.now()}.jpg`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
+  
+  const handleBatchDownload = async () => {
+    if (favoriteImages.length === 0 || isZipping) return;
 
-  const handleShare = async (imageUrl: string) => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Favorite Image',
-          text: '看看我收藏的图片！',
-          url: imageUrl
-        });
-      } catch (error) {
-        console.log('分享失败:', error);
-      }
+    setIsZipping(true);
+    toast({
+      title: '正在打包收藏图片...',
+      description: `准备压缩 ${favoriteImages.length} 张图片，请稍候。`,
+    });
+
+    try {
+      const zip = new JSZip();
+      
+      const imagePromises = favoriteImages.map(async (image) => {
+        try {
+          const response = await fetch(image.image_url);
+          if (!response.ok) {
+            throw new Error(`无法获取图片: ${image.image_url}`);
+          }
+          const blob = await response.blob();
+          const filename = image.image_url.split('/').pop()?.split('?')[0] || `image_${image.id}.jpg`;
+          zip.file(filename, blob);
+        } catch (fetchError) {
+          console.error(`跳过无法下载的图片: ${image.image_url}`, fetchError);
+        }
+      });
+
+      await Promise.all(imagePromises);
+
+      const zipContent = await zip.generateAsync({ type: 'blob' });
+      
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipContent);
+      const zipFileName = `favorites_${currentConversation?.title.replace(/ /g, '_') || 'collection'}_${Date.now()}.zip`;
+      link.download = zipFileName;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+
+      toast({
+        title: '打包完成',
+        description: `${zipFileName} 已开始下载。`,
+      });
+
+    } catch (error) {
+      console.error('创建压缩文件失败', error);
+      toast({
+        title: '打包失败',
+        description: '无法创建压缩文件，请检查控制台获取更多信息。',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsZipping(false);
     }
   };
 
@@ -53,15 +101,32 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
           <Heart className="w-5 h-5 text-ai-secondary" />
           <h3 className="font-semibold text-foreground">收藏图片</h3>
         </div>
-        <Badge variant="outline" className="text-xs border-ai-secondary/30 text-ai-secondary">
-          {favoriteImages.length} 张图片
-        </Badge>
+        <div className="flex items-center gap-2">
+          {favoriteImages.length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleBatchDownload}
+              disabled={isZipping}
+            >
+              {isZipping ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              {isZipping ? '打包中...' : '下载全部'}
+            </Button>
+          )}
+          <Badge variant="outline" className="text-xs border-ai-secondary/30 text-ai-secondary">
+            {favoriteImages.length} 张图片
+          </Badge>
+        </div>
       </div>
 
       {/* Preview Area */}
-      <div className="flex-1 p-4">
+      <div className="flex-1 flex flex-col min-h-0">
         {favoriteImages.length === 0 && !isImageProcessing ? (
-          <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+          <div className="p-4 h-full flex flex-col items-center justify-center text-center space-y-4">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-ai-primary/20 to-ai-secondary/20 flex items-center justify-center">
               <Heart className="w-12 h-12 text-ai-primary" />
             </div>
@@ -73,7 +138,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
             </div>
           </div>
         ) : isImageProcessing ? (
-          <div className="h-full flex flex-col items-center justify-center space-y-6">
+          <div className="p-4 h-full flex flex-col items-center justify-center space-y-6">
             <div className="w-32 h-32 rounded-full bg-gradient-to-br from-ai-primary/20 to-ai-secondary/20 flex items-center justify-center relative">
               <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ai-primary to-ai-secondary animate-spin opacity-20"></div>
               <Sparkles className="w-16 h-16 text-ai-primary animate-pulse" />
@@ -95,52 +160,51 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
             </div>
           </div>
         ) : (
-          <div className="h-full flex flex-col">
-            {/* Image Grid */}
-            <ScrollArea className="flex-1">
-              <div className="grid grid-cols-1 gap-4">
-                {favoriteImages.map((image) => (
-                  <div key={image.id} className="relative group">
-                    <div className="aspect-square bg-agent-message rounded-lg border border-message-border overflow-hidden">
-                      <img 
-                        src={image.image_url} 
-                        alt="Favorite" 
-                        className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => setSelectedImage(image.image_url)}
-                        onError={(e) => {
-                          console.error('图片加载失败:', image.image_url);
-                        }}
-                      />
-                    </div>
-                    
-                    {/* Image Actions */}
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 rounded-full shadow-md backdrop-blur-sm bg-white/20 hover:bg-white/30 text-white"
-                        onClick={() => handleDownload(image.image_url)}
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 rounded-full shadow-md backdrop-blur-sm bg-white/20 hover:bg-white/30 text-white"
-                        onClick={() => handleShare(image.image_url)}
-                      >
-                        <Share className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    
-                    {/* Image Info */}
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {new Date(image.created_at).toLocaleString()}
-                    </div>
+          <ScrollArea className="h-full">
+            <div className="grid grid-cols-1 gap-4 p-4">
+              {favoriteImages.map((image) => (
+                <div key={image.id} className="relative group">
+                  <div className="aspect-square bg-agent-message rounded-lg border border-message-border overflow-hidden">
+                    <img 
+                      src={image.image_url} 
+                      alt="Favorite" 
+                      className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => setSelectedImage(image.image_url)}
+                      onError={(e) => {
+                        console.error('图片加载失败:', image.image_url);
+                      }}
+                    />
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
+                  
+                  {/* Image Actions */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 rounded-full shadow-md backdrop-blur-sm bg-white/20 hover:bg-white/30 text-white"
+                      onClick={() => handleDownload(image.image_url)}
+                      title="下载图片"
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 rounded-full shadow-md backdrop-blur-sm bg-red-500/20 hover:bg-red-500/30 text-red-500"
+                      onClick={() => unfavoriteImage(image.message_id)}
+                      title="取消收藏"
+                    >
+                      <Heart className="w-4 h-4 fill-current" />
+                    </Button>
+                  </div>
+                  
+                  {/* Image Info */}
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {new Date(image.created_at).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
             
             {/* Selected Image Modal */}
             {selectedImage && (
@@ -154,7 +218,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
                 </div>
               </div>
             )}
-          </div>
+          </ScrollArea>
         )}
       </div>
 
