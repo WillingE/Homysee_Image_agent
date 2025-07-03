@@ -24,6 +24,22 @@ export default {
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
+				// AI-specific colors
+				'ai-primary': 'hsl(var(--ai-primary))',
+				'ai-primary-light': 'hsl(var(--ai-primary-light))',
+				'ai-primary-dark': 'hsl(var(--ai-primary-dark))',
+				'ai-secondary': 'hsl(var(--ai-secondary))',
+				'ai-accent': 'hsl(var(--ai-accent))',
+				// Chat interface
+				'chat-background': 'hsl(var(--chat-background))',
+				'chat-surface': 'hsl(var(--chat-surface))',
+				'user-message': 'hsl(var(--user-message))',
+				'agent-message': 'hsl(var(--agent-message))',
+				'message-border': 'hsl(var(--message-border))',
+				// Status colors
+				'status-processing': 'hsl(var(--status-processing))',
+				'status-success': 'hsl(var(--status-success))',
+				'status-error': 'hsl(var(--status-error))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'
@@ -84,11 +100,31 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'fade-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'pulse-glow': {
+					'0%, 100%': {
+						boxShadow: '0 0 20px hsl(var(--ai-primary) / 0.2)'
+					},
+					'50%': {
+						boxShadow: '0 0 40px hsl(var(--ai-primary) / 0.4)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.3s ease-out',
+				'pulse-glow': 'pulse-glow 2s ease-in-out infinite'
 			}
 		}
 	},

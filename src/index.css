@@ -2,39 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* AI Image Agent Design System - Modern & Intelligent */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* AI-themed color palette */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    
+    /* AI Agent primary colors - Deep purple/blue theme */
+    --ai-primary: 263 70% 50%;
+    --ai-primary-light: 263 70% 60%;
+    --ai-primary-dark: 263 70% 40%;
+    --ai-secondary: 280 100% 70%;
+    --ai-accent: 200 100% 70%;
+    
+    /* Chat interface colors */
+    --chat-background: 240 10% 4.5%;
+    --chat-surface: 240 5% 6%;
+    --user-message: 263 70% 50%;
+    --agent-message: 240 5% 8%;
+    --message-border: 240 5% 12%;
+    
+    /* Status colors for image processing */
+    --status-processing: 45 100% 60%;
+    --status-success: 120 100% 40%;
+    --status-error: 0 84% 60%;
+    
+    /* Gradients for modern AI feel */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--ai-primary)), hsl(var(--ai-secondary)));
+    --gradient-surface: linear-gradient(135deg, hsl(var(--chat-surface)), hsl(240 5% 8%));
+    --gradient-glow: radial-gradient(circle at center, hsl(var(--ai-primary) / 0.15), transparent 70%);
+    
+    /* Enhanced shadows with AI glow */
+    --shadow-elegant: 0 8px 32px hsl(var(--ai-primary) / 0.12);
+    --shadow-glow: 0 0 40px hsl(var(--ai-primary) / 0.25);
+    --shadow-surface: 0 4px 16px hsl(240 10% 2% / 0.4);
+    
+    /* Animation transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Updated semantic tokens for dark theme */
+    --card: 240 5% 6%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 240 5% 8%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 263 70% 50%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 240 5% 8%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 240 5% 10%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 200 100% 70%;
+    --accent-foreground: 240 10% 10%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 240 5% 12%;
+    --input: 240 5% 8%;
+    --ring: 263 70% 50%;
 
     --radius: 0.5rem;
 
