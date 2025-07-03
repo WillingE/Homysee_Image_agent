@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Send, Image, Upload, Sparkles } from 'lucide-react';
+import { Send, Image, Upload, Sparkles, Heart, HeartHandshake } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import aiAvatar from '@/assets/ai-avatar.jpg';
 import { useConversations } from '@/hooks/useConversations';
@@ -24,7 +24,12 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     sendMessage, 
     addAIResponse,
     createConversation,
-    addMessage
+    addMessage,
+    updateCurrentImage,
+    updateImageProcessing,
+    favoriteImage,
+    unfavoriteImage,
+    isImageFavorited
   } = useConversations();
   const { uploadImage } = useImageUpload();
   const { toast } = useToast();
@@ -40,6 +45,14 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     }
   }, [messages]);
 
+  const handleFavoriteClick = async (message: any) => {
+    if (isImageFavorited(message.id)) {
+      await unfavoriteImage(message.id);
+    } else {
+      await favoriteImage(message);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
     
@@ -50,6 +63,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     }
 
     setIsLoading(true);
+    updateImageProcessing(true, 0);
     const messageContent = inputMessage;
     setInputMessage('');
 
@@ -85,6 +99,8 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
         if (taskId && taskId.startsWith('http')) {
           // 已经是完成的图片URL，直接显示
           console.log("✅ Image processing completed, URL:", taskId);
+          updateCurrentImage(taskId);
+          updateImageProcessing(false, 100);
           toast({
             title: '图片处理完成',
             description: '您的图片已经处理完成！',
@@ -92,6 +108,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
         } else {
           // 显示处理状态并等待后续更新
           console.log("🔄 Image processing task created:", taskId);
+          updateImageProcessing(true, 50);
         }
       }
 
@@ -107,6 +124,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
       await addAIResponse('抱歉，我遇到了一些问题，请稍后再试。');
     } finally {
       setIsLoading(false);
+      updateImageProcessing(false, 0);
     }
   };
 
@@ -138,6 +156,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
 
     try {
       setIsLoading(true);
+      updateImageProcessing(true, 20);
       
       // 上传图片到 Supabase Storage
       console.log('Uploading image to storage...');
@@ -148,6 +167,8 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
       }
 
       console.log('Image uploaded successfully, URL:', imageUrl);
+      updateCurrentImage(imageUrl);
+      updateImageProcessing(true, 50);
       
       // 发送带图片的消息
       console.log('Sending message with image...');
@@ -158,6 +179,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
       }
 
       console.log('Message sent successfully, calling AI agent...');
+      updateImageProcessing(true, 70);
       
       // 调用AI分析图片
       const response = await supabase.functions.invoke('ai-chat-agent', {
@@ -180,6 +202,8 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
         addMessage(response.data.message);
       }
 
+      updateImageProcessing(false, 100);
+
     } catch (error) {
       console.error('Error in handleImageUpload:', error);
       toast({
@@ -187,6 +211,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
         description: error instanceof Error ? error.message : '图片上传时出错',
         variant: 'destructive'
       });
+      updateImageProcessing(false, 0);
     } finally {
       setIsLoading(false);
     }
@@ -256,12 +281,37 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                   )}
                 >
                   {message.image_url && (
-                    <div className="mb-2">
+                    <div className="mb-2 relative group">
                       <img 
                         src={message.image_url} 
                         alt="Uploaded" 
-                        className="max-w-full h-auto rounded-lg"
+                        className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => updateCurrentImage(message.image_url, message.id)}
+                        title="点击在右侧预览区域查看大图"
                       />
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={cn(
+                            "h-8 w-8 p-0 rounded-full shadow-md backdrop-blur-sm",
+                            isImageFavorited(message.id) 
+                              ? "bg-red-500/20 hover:bg-red-500/30 text-red-500" 
+                              : "bg-white/20 hover:bg-white/30 text-white"
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFavoriteClick(message);
+                          }}
+                          title={isImageFavorited(message.id) ? "取消收藏" : "收藏图片"}
+                        >
+                          {isImageFavorited(message.id) ? (
+                            <Heart className="w-4 h-4 fill-current" />
+                          ) : (
+                            <Heart className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   )}
                   <p className="text-sm leading-relaxed">{message.content}</p>

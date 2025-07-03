@@ -268,3 +268,12 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+export interface FavoriteImage {
+  id: string;
+  user_id: string;
+  conversation_id: string;
+  message_id: string;
+  image_url: string;
+  created_at: string;
+}
