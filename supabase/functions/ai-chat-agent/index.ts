@@ -26,6 +26,16 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // 获取对话信息以获取用户ID
+    const { data: conversation, error: conversationError } = await supabase
+      .from('conversations')
+      .select('user_id')
+      .eq('id', conversationId)
+      .single();
+
+    if (conversationError) throw conversationError;
+    const userId = conversation.user_id;
+
     // 获取对话历史
     const { data: messages, error: messagesError } = await supabase
       .from('chat_messages')
@@ -137,26 +147,81 @@ serve(async (req) => {
       if (toolCall.function.name === 'image_processing') {
         const args = JSON.parse(toolCall.function.arguments);
         
-        // 调用图片处理服务
-        const imageProcessingResponse = await fetch(`${supabaseUrl}/functions/v1/image-processing`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            original_image_url: args.original_image_url,
-            prompt: args.prompt,
-            conversation_id: conversationId
-          }),
-        });
-
-        if (imageProcessingResponse.ok) {
-          const imageResult = await imageProcessingResponse.json();
-          processedImageUrl = imageResult.task_id;
-          responseContent += `\n\n我正在为您处理图片，请稍候...`;
+        // 🔍 从对话历史中提取最近的图片URL
+        let actualImageUrl = args.original_image_url;
+        
+        // 如果URL不是有效的HTTP/HTTPS链接，从对话历史中寻找
+        if (!actualImageUrl || !actualImageUrl.startsWith('http')) {
+          console.log("Original image URL invalid, searching conversation history...");
+          
+          // 从最新的消息开始倒序查找包含图片的消息
+          for (let i = messages.length - 1; i >= 0; i--) {
+            const message = messages[i];
+            if (message.image_url && message.image_url.startsWith('http')) {
+              actualImageUrl = message.image_url;
+              console.log("Found image URL from message history:", actualImageUrl);
+              break;
+            }
+            
+            // 如果消息内容包含"已上传图片："，提取URL
+            if (message.content.includes('已上传图片：')) {
+              const urlMatch = message.content.match(/已上传图片：(https?:\/\/[^\s\n]+)/);
+              if (urlMatch && urlMatch[1]) {
+                actualImageUrl = urlMatch[1];
+                console.log("Extracted image URL from message content:", actualImageUrl);
+                break;
+              }
+            }
+          }
+        }
+        
+        // 如果仍然没有找到有效的图片URL，返回错误
+        if (!actualImageUrl || !actualImageUrl.startsWith('http')) {
+          console.error("No valid image URL found in conversation");
+          responseContent += `\n\n抱歉，我没有找到需要处理的图片。请先上传图片，然后再告诉我您想要的编辑效果。`;
         } else {
-          responseContent += `\n\n抱歉，图片处理服务暂时不可用。`;
+          console.log("Using image URL for processing:", actualImageUrl);
+          
+          // 调用图片处理服务
+          const imageProcessingResponse = await fetch(`${supabaseUrl}/functions/v1/image-processing`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              original_image_url: actualImageUrl,  // 使用正确的图片URL
+              prompt: args.prompt,
+              conversation_id: conversationId,
+              user_id: userId
+            }),
+          });
+
+          if (imageProcessingResponse.ok) {
+            const imageResult = await imageProcessingResponse.json();
+            console.log("Image processing result:", imageResult);
+            
+            if (imageResult.status === 'completed' && imageResult.processed_image_url) {
+              // 🎉 图片处理已完成！直接返回处理后的图片
+              processedImageUrl = imageResult.processed_image_url;
+              responseContent += `\n\n🎉 图片处理完成！`;
+              
+              console.log("✅ Image processing completed immediately:", processedImageUrl);
+            } else if (imageResult.status === 'failed') {
+              // 处理失败
+              responseContent += `\n\n❌ 图片处理失败：${imageResult.error || '未知错误'}`;
+              console.error("❌ Image processing failed:", imageResult.error);
+            } else {
+              // 备用：如果仍然返回task_id（不应该发生）
+              processedImageUrl = imageResult.task_id;
+              responseContent += `\n\n⏳ 图片正在处理中，请稍候...`;
+              console.log("⚠️ Unexpected: Still got task_id:", imageResult.task_id);
+            }
+          } else {
+            const errorText = await imageProcessingResponse.text();
+            responseContent += `\n\n❌ 图片处理服务暂时不可用：${errorText}`;
+            console.error("❌ Image processing service error:", errorText);
+          }
         }
       }
     }

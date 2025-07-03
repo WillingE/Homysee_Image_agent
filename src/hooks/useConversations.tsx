@@ -107,14 +107,32 @@ export const useConversations = () => {
   };
 
   // 发送消息
-  const sendMessage = async (content: string, imageUrl?: string) => {
-    if (!currentConversation || !user) return null;
+  const sendMessage = async (content: string, imageUrl?: string, targetConversation?: Conversation) => {
+    const conversation = targetConversation || currentConversation;
+    console.log('🚀 sendMessage called with:', { 
+      content, 
+      imageUrl, 
+      targetConversation: targetConversation?.id,
+      currentConversation: currentConversation?.id, 
+      userId: user?.id 
+    });
+    
+    if (!conversation) {
+      console.error('❌ No conversation available');
+      return null;
+    }
+    
+    if (!user) {
+      console.error('❌ No user');
+      return null;
+    }
 
     try {
+      console.log('📤 Inserting message to database...');
       const { data, error } = await supabase
         .from('chat_messages')
         .insert({
-          conversation_id: currentConversation.id,
+          conversation_id: conversation.id,
           role: 'user',
           content,
           image_url: imageUrl
@@ -122,15 +140,19 @@ export const useConversations = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database error:', error);
+        throw error;
+      }
       
+      console.log('✅ Message inserted successfully:', data);
       setMessages(prev => [...prev, data as ChatMessage]);
       return data as ChatMessage;
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
       toast({
         title: '发送消息失败',
-        description: '无法发送消息',
+        description: error instanceof Error ? error.message : '无法发送消息',
         variant: 'destructive'
       });
       return null;
@@ -163,6 +185,15 @@ export const useConversations = () => {
     }
   };
 
+  const addMessage = (message: ChatMessage) => {
+    setMessages(prev => {
+      if (prev.some(m => m.id === message.id)) {
+        return prev;
+      }
+      return [...prev, message];
+    });
+  };
+
   // 选择对话
   const selectConversation = async (conversation: Conversation) => {
     setCurrentConversation(conversation);
@@ -175,6 +206,14 @@ export const useConversations = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!currentConversation) {
+      setMessages([]);
+      return;
+    }
+    loadMessages(currentConversation.id);
+  }, [currentConversation]);
+
   return {
     conversations,
     currentConversation,
@@ -184,6 +223,13 @@ export const useConversations = () => {
     selectConversation,
     sendMessage,
     addAIResponse,
+    addMessage,
     loadConversations
   };
 };
+
+export type ChatMessageWithSender = ChatMessage & {
+  // ... existing code ...
+};
+
+export default useConversations;

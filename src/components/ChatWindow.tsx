@@ -23,7 +23,8 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     messages, 
     sendMessage, 
     addAIResponse,
-    createConversation 
+    createConversation,
+    addMessage
   } = useConversations();
   const { uploadImage } = useImageUpload();
   const { toast } = useToast();
@@ -32,7 +33,6 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [processingTasks, setProcessingTasks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -70,11 +70,29 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
         throw new Error(response.error.message || 'AI service error');
       }
 
-      // 如果需要图片处理，开始轮询任务状态
+      // 立即显示AI回复
+      if (response.data.message) {
+        addMessage(response.data.message);
+      }
+
+      // 🚀 如果需要图片处理，直接处理结果（不再需要轮询）
       if (response.data?.requiresImageProcessing && response.data?.message?.image_url) {
+        // image_url 现在包含的是task_id，但由于我们改为同步处理，
+        // 我们需要检查AI agent是否已经返回了处理完成的图片
         const taskId = response.data.message.image_url;
-        setProcessingTasks(prev => new Set([...prev, taskId]));
-        pollImageProcessingStatus(taskId);
+        
+        // 检查是否是有效的URL（处理完成的图片）
+        if (taskId && taskId.startsWith('http')) {
+          // 已经是完成的图片URL，直接显示
+          console.log("✅ Image processing completed, URL:", taskId);
+          toast({
+            title: '图片处理完成',
+            description: '您的图片已经处理完成！',
+          });
+        } else {
+          // 显示处理状态并等待后续更新
+          console.log("🔄 Image processing task created:", taskId);
+        }
       }
 
     } catch (error) {
@@ -90,67 +108,6 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const pollImageProcessingStatus = async (taskId: string) => {
-    const maxPolls = 60; // 最多轮询60次（5分钟）
-    let pollCount = 0;
-
-    const poll = async () => {
-      try {
-        const response = await supabase.functions.invoke('image-processing', {
-          body: { task_id: taskId }
-        });
-
-        if (response.data?.status === 'completed') {
-          setProcessingTasks(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(taskId);
-            return newSet;
-          });
-          
-          toast({
-            title: '图片处理完成',
-            description: '您的图片已经处理完成！',
-          });
-          return;
-        } else if (response.data?.status === 'failed') {
-          setProcessingTasks(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(taskId);
-            return newSet;
-          });
-          
-          toast({
-            title: '图片处理失败',
-            description: '图片处理时出错，请重试',
-            variant: 'destructive'
-          });
-          return;
-        }
-
-        // 继续轮询
-        pollCount++;
-        if (pollCount < maxPolls) {
-          setTimeout(poll, 5000); // 每5秒轮询一次
-        } else {
-          setProcessingTasks(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(taskId);
-            return newSet;
-          });
-        }
-      } catch (error) {
-        console.error('Error polling task status:', error);
-        setProcessingTasks(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(taskId);
-          return newSet;
-        });
-      }
-    };
-
-    poll();
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -194,7 +151,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
       
       // 发送带图片的消息
       console.log('Sending message with image...');
-      const userMessage = await sendMessage('我上传了一张图片，请帮我分析一下', imageUrl);
+      const userMessage = await sendMessage('我上传了一张图片，请帮我分析一下', imageUrl, conversation);
       
       if (!userMessage) {
         throw new Error('消息发送失败');
@@ -216,6 +173,11 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
       if (response.error) {
         console.error('AI agent error:', response.error);
         throw new Error(response.error.message || 'AI service error');
+      }
+
+      // 立即显示AI回复
+      if (response.data.message) {
+        addMessage(response.data.message);
       }
 
     } catch (error) {
@@ -307,11 +269,6 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                     <span className="text-xs text-muted-foreground">
                       {new Date(message.created_at).toLocaleTimeString()}
                     </span>
-                    {processingTasks.has(message.image_url || '') && (
-                      <Badge variant="outline" className="text-xs animate-pulse">
-                        处理中...
-                      </Badge>
-                    )}
                   </div>
                 </div>
 
@@ -366,6 +323,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
           
           <div className="flex-1 relative">
             <Input
+              id="chat-input"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -389,7 +347,10 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
             variant="ghost" 
             size="sm" 
             className="text-xs text-muted-foreground hover:text-ai-primary"
-            onClick={() => setInputMessage('更换背景')}
+            onClick={() => {
+              setInputMessage('更换背景为：');
+              document.getElementById('chat-input')?.focus();
+            }}
           >
             <Image className="w-3 h-3 mr-1" />
             更换背景
@@ -398,7 +359,10 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
             variant="ghost" 
             size="sm" 
             className="text-xs text-muted-foreground hover:text-ai-primary"
-            onClick={() => setInputMessage('移除物体')}
+            onClick={() => {
+              setInputMessage('移除图中的：');
+              document.getElementById('chat-input')?.focus();
+            }}
           >
             移除物体
           </Button>
@@ -406,7 +370,10 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
             variant="ghost" 
             size="sm" 
             className="text-xs text-muted-foreground hover:text-ai-primary"
-            onClick={() => setInputMessage('添加元素')}
+            onClick={() => {
+              setInputMessage('在图中添加：');
+              document.getElementById('chat-input')?.focus();
+            }}
           >
             添加元素
           </Button>

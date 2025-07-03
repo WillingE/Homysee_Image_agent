@@ -1,0 +1,455 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+-----
+
+**完整AI Agent开发框架：对话式智能修图助手**
+
+**概述**
+
+本框架旨在指导您开发一个AI Agent，该Agent能够通过多轮对话，理解并执行用户提出的复杂修图指令（如换背景、抠图、增加物品/人物、设计海报）。它会利用对话历史信息理解上下文，并调用Replicate的Flux-Kontext-Pro生图接口来执行这些操作，最终返回修图结果。开发流程将充分利用Lovable（用户体验/产品）、GitHub（版本控制）、Cursor（IDE/AI辅助编程）和Supabase（后端/数据库/认证）这四个核心工具，确保高效、系统且安全地构建产品。
+
+**I. AI 助手角色与指令 (针对我的AI开发助手)**
+
+作为您的专业AI开发助手，我将严格遵循本开发规范框架，并具备以下核心职责与优先级，以协助您进行全栈AI产品开发：
+
+  * **核心任务：**
+      * **代码生成与优化：** 根据修图功能需求生成符合规范的代码片段、组件、接口实现，并提供重构和性能优化建议。
+      * **Bug 排查与解决方案：** 协助分析与AI接口调用、图像处理逻辑相关的Bug，提供潜在的解决方案和调试思路。
+      * **文档撰写与更新：** 根据修图功能和AI接口变动，协助撰写和更新项目文档（如 `README`、API 文档）。
+      * **测试用例生成：** 协助生成单元测试、API 测试用例，特别关注修图指令解析、多轮对话上下文管理和AI调用环节。
+      * **Git 操作辅助：** 提供符合Git工作流的命令和提交信息建议。
+      * **技术选型与架构建议：** 在适当时候提供技术选型和架构层面的建议，但优先考虑现有工具栈。
+  * **优先级：**
+    1.  **核心修图功能实现和正确性：** 确保AI Agent能够准确理解多轮修图指令并正确调用生图接口。
+    2.  **安全性：** 用户输入、API密钥管理、图像数据处理安全、以及会话数据安全始终是最高优先级。
+    3.  **用户体验 (Lovable)：** 确保对话流程自然流畅、修图结果反馈及时直观，并能智能地进行上下文推断和提示。
+    4.  **可维护性：** 代码易于理解和未来扩展，方便增加新的修图功能或切换AI模型。
+    5.  **性能：** 优化AI调用、图像传输和处理的延迟。
+  * **交流方式：**
+      * 当您提出修图功能需求时，请直接提供符合规范的代码或详细建议。
+      * 当遇到不确定或需要更多信息时，请提出清晰、具体的问题，并提供可能的选项。
+      * 在提供代码或建议时，请明确指出已考虑Lovable、GitHub、Cursor和Supabase的特性。
+  * **工具集成指令：**
+      * **Cursor IDE：** 提供可直接插入的代码块，并考虑其内置的AI辅助和重构功能。
+      * **GitHub：** 基于简化的GitHub Flow提供版本控制建议，并协助生成符合规范的提交信息。
+      * **Lovable：** 在设计用户体验或前端交互时，考虑“Lovable”的用户友好性和直观性，特别是在对话式修图的用户引导、历史消息展示和结果展示方面。
+      * **Supabase：**
+          * **数据库操作：** 优先使用Supabase Client SDK 进行数据查询、插入、更新和删除（例如：存储用户对话历史、修图任务记录、生成的图片URL）。
+          * **认证：** 在涉及用户登录、注册和会话管理时，考虑使用Supabase Auth的能力。
+          * **授权：** 在设计数据访问权限时，考虑Supabase RLS (Row Level Security) 的应用，确保用户只能访问自己的修图记录和图片。
+          * **文件存储：** 如果涉及到文件上传（用户上传原始图片）和生成图片存储，请考虑Supabase Storage。
+          * **实时功能：** 如果未来需要实时功能（例如修图进度更新、新消息通知），请提醒我Supabase Realtime的潜力。
+          * **部署：** 在环境配置和部署建议中，请考虑Supabase的环境变量设置和托管服务模式。
+
+**II. 项目结构规范**
+
+  * **前端项目结构 (`frontend/`)**
+      * `src/`
+          * `components/`: 可复用UI组件 (e.g., `ChatWindow.tsx`, `MessageBubble.tsx`, `ImageDisplay.tsx`, `PromptInput.tsx`, `FileUploadZone.tsx`)
+          * `pages/`: 页面组件 (e.g., `HomePage.tsx`, `AuthPage.tsx`, `ImageEditorPage.tsx`)
+          * `hooks/`: 自定义Hook (e.g., `useChat.ts` - 管理聊天状态和消息发送, `useImageProcessor.ts` - 管理图片上传和任务状态)
+          * `services/`: API调用服务 (包括与后端API和Supabase的交互)
+              * `api.ts`: 后端API调用封装
+              * `supabaseClient.ts`: Supabase客户端初始化和通用操作
+              * `chatService.ts`: 与后端聊天API交互，管理对话历史获取与发送
+              * `imageProcessingService.ts`: 与后端图片处理API交互，处理图片上传与任务查询
+              * `authService.ts`: 用户认证相关服务，处理登录/注册/登出
+          * `stores/` (可选，如使用Zustand, Redux等状态管理库): 全局状态管理，例如聊天历史、当前图片、任务状态、用户信息等
+          * `utils/`: 工具函数 (e.g., `promptUtils.ts` - 前端提示词辅助, `imageUtils.ts` - 图像预览/处理辅助)
+          * `constants/`: 常量定义
+          * `types/`: TypeScript类型定义 (e.g., `Chat.ts`, `ImageTask.ts`, `ReplicateAPI.ts`, `User.ts`, `Auth.ts`)
+          * `assets/`: 静态资源
+      * `public/`: 公共静态文件
+      * `docs/`: 项目文档
+  * **后端项目结构 (`backend/`)**
+      * `src/`
+          * `controllers/`: 处理HTTP请求，调用业务逻辑 (e.g., `chatController.ts` - 处理聊天消息, `imageController.ts` - 处理图片任务, `authController.ts` - 处理用户认证)
+          * `services/`: 业务逻辑封装
+              * `aiAgentService.ts`: **AI Agent核心逻辑，包括LLM调用、工具选择、Prompt工程、上下文管理。**
+              * `replicateService.ts`: 专门与Replicate API交互，处理请求/响应/轮询。
+              * `supabaseService.ts`: Supabase数据库和存储操作封装。
+              * `conversationService.ts`: 专门管理用户对话历史的存取。
+              * `imageTaskService.ts`: 专门管理图片任务的创建和状态更新。
+              * `userService.ts`: 用户信息管理，包括从Supabase Auth获取并格式化用户数据。
+          * `models/`: 数据模型 (根据Supabase表结构定义) (e.g., `User.ts`, `ChatMessage.ts`, `ImageTask.ts`, `Conversation.ts`)
+          * `middlewares/`: 中间件 (e.g., `authMiddleware.ts`, `validationMiddleware.ts`)
+          * `routes/`: 路由定义 (e.g., `api.ts`)
+          * `utils/`: 工具函数 (e.g., `logger.ts`, `errorHandler.ts`, `tokenCounter.ts` - 用于计算上下文Token量)
+          * `config/`: 配置文件 (e.g., `aiConfig.ts`, `supabaseConfig.ts`)
+          * `validators/`: 数据验证
+      * `tests/`: 测试文件
+      * `docs/`: API文档
+      * `scripts/`: 脚本文件
+
+**III. 代码规范**
+
+  * **命名规范：**
+      * JavaScript/TypeScript: 变量和函数小驼峰，常量大写下划线，类和组件大驼峰，文件名小写连字符。
+      * Python: 变量和函数下划线，常量大写下划线，类大驼峰，文件名下划线。
+  * **代码格式化：**
+      * 强制使用 Prettier（前端）或 Black（Python）自动格式化。AI在生成代码时，应考虑其格式化兼容性。
+      * 缩进：2空格（JavaScript）或4空格（Python）。
+      * 行长度：最大120字符。
+      * 函数长度：不超过50行（初期可适当放宽，但应作为重构目标。AI 在生成复杂函数时应主动建议拆分）。
+  * **注释规范：**
+      * 使用JSDoc (JS/TS) 或 Python docstrings 为函数、类和复杂逻辑提供详细注释，说明其功能、参数、返回值和可能抛出的错误。
+      * AI应在生成复杂代码时自动添加或建议添加详细注释。
+
+**IV. API 设计规范**
+
+  * **RESTful API 标准：**
+      * `POST /api/v1/auth/signup` (用户注册)
+      * `POST /api/v1/auth/login` (用户登录)
+      * `GET /api/v1/conversations/:conversationId/messages` (获取特定对话的历史消息)
+      * `POST /api/v1/conversations/:conversationId/messages` (发送新消息到指定对话，触发AI处理)
+      * `POST /api/v1/image/upload` (上传原始图片)
+      * `GET /api/v1/image/tasks/:taskId` (获取修图任务状态和结果)
+      * `GET /api/v1/users/me` (获取当前用户信息)
+  * **统一响应格式：**
+    ```json
+    {
+      "code": 200,
+      "message": "success",
+      "data": { /* 具体数据 */ },
+      "timestamp": "2024-07-03T12:00:00Z",
+      "requestId": "uuid"
+    }
+    ```
+  * **登录成功响应格式 (示例):**
+    ```json
+    {
+      "code": 200,
+      "message": "success",
+      "data": {
+        "userId": "uuid-of-user", // Supabase Auth user ID
+        "username": "Grace",
+        "email": "grace.cai@eriabank.com",
+        "authProvider": 0, // 0: email/password, 1: Google, 2: GitHub 等
+        "accessToken": "jwt-token-from-supabase" // JWT令牌用于后续认证
+      },
+      "timestamp": "2024-07-03T12:00:00Z",
+      "requestId": "uuid"
+    }
+    ```
+  * **错误响应格式：**
+    ```json
+    {
+      "code": 400,
+      "message": "参数错误",
+      "error": {
+        "type": "VALIDATION_ERROR",
+        "details": [
+          { "field": "message", "message": "消息内容不能为空" }
+        ]
+      },
+      "timestamp": "2024-07-03T12:00:00Z",
+      "requestId": "uuid"
+    }
+    ```
+  * **HTTP 状态码使用：** 200 (成功), 201 (创建成功), 400 (客户端错误), 401 (未授权), 403 (禁止访问), 404 (资源不存在), 429 (请求过于频繁), 500 (服务器错误)。
+
+**V. 数据库设计规范 (Supabase PostgreSQL)**
+
+  * **数据库类型：** Supabase (PostgreSQL)
+  * **表命名规范：** 下划线分隔，复数形式 (e.g., `users`, `conversations`, `chat_messages`, `image_tasks`)
+  * **字段命名规范：** 下划线分隔 (e.g., `user_id`, `created_at`, `original_image_url`, `processed_image_url`, `replicate_job_id`)
+  * **必需字段：**
+      * 每个表必须包含：`id` (uuid, `gen_random_uuid()` 默认值), `created_at` (timestamp with time zone, `now()` 默认值), `updated_at` (timestamp with time zone, 通过触发器自动更新)。
+      * AI提示：在生成表结构或Model定义时，默认包含这些字段，并提醒它们在Supabase中通常是自动处理的。
+  * **表结构：**
+      * **`users` 表 (与Supabase Auth同步或扩展)：**
+          * `id`: uuid (主键，**与Supabase Auth的`auth.users`表中的`id`字段保持一致**，通常通过触发器或Supabase Function在用户注册时自动同步)
+          * `email`: text (UNIQUE, NOT NULL, **与Supabase Auth同步**)
+          * `username`: text (UNIQUE, NOT NULL, **用户注册时提供，或从Auth元数据中获取**)
+          * `auth_provider`: integer (NOT NULL, **记录认证方式，例如：0=email/password, 1=google, 2=github等，可在用户注册时记录或从Auth元数据中推断**)
+          * `created_at`: timestamp with time zone (Supabase Auth自动填充)
+          * `updated_at`: timestamp with time zone (Supabase Auth自动填充，或通过触发器更新)
+          * ... (其他用户自定义属性，如`avatar_url`等)
+          * **Supabase Auth集成说明：** Supabase Auth默认会有一个`auth.users`表。您可以在`public` schema下创建一个`users`表，并通过Supabase的Database Functions或Triggers在用户注册/更新时，将`auth.users`表中的`id`, `email`等信息同步到您的`public.users`表中，并添加`username`和`auth_provider`等自定义字段。
+              * **`authProvider` 字段处理：** Supabase Auth会记录用户是通过哪种OAuth提供商（如Google, GitHub）或Email/Password登录的。您可以在后端登录逻辑中，根据Supabase Auth返回的用户元数据来判断`authProvider`的值，并将其存储到`public.users`表中。
+      * **`conversations` 表 (用于管理多轮对话上下文)：**
+          * `id`: uuid
+          * `user_id`: uuid (外键，关联 `users` 表)
+          * `title`: text (可选，对话标题，例如“换背景对话”，可以由AI自动生成或用户命名)
+          * `last_message_at`: timestamp with time zone (用于排序和识别最近活跃对话)
+          * `created_at`: timestamp with time zone
+          * `updated_at`: timestamp with time zone
+      * **`chat_messages` 表 (用于存储每条对话消息)：**
+          * `id`: uuid
+          * `conversation_id`: uuid (外键，关联 `conversations` 表)
+          * `user_id`: uuid (外键，关联 `users` 表)
+          * `role`: text (e.g., 'user', 'assistant', 'system', 'tool\_call', 'tool\_output')
+          * `content`: text (消息内容)
+          * `image_url`: text (可选，如果消息中包含图片URL)
+          * `tool_calls`: jsonb (可选，如果Agent执行了工具调用，记录调用信息)
+          * `tool_outputs`: jsonb (可选，如果工具返回了结果，记录输出信息)
+          * `created_at`: timestamp with time zone
+      * **`image_tasks` 表 (用于存储每个修图任务的详细信息)：**
+          * `id`: uuid
+          * `conversation_id`: uuid (外键，关联 `conversations` 表，修图任务通常关联到某个对话)
+          * `user_id`: uuid (外键，关联 `users` 表)
+          * `original_image_url`: text (可选，用户上传的原始图片URL，存储在Supabase Storage)
+          * `user_prompt_history_summary`: text (AI Agent对本次修图任务的上下文理解和提炼，用于生成`generated_replicate_prompt`)
+          * `generated_replicate_prompt`: text (AI Agent生成并发送给Replicate的`prompt`，非常重要，用于调试和回溯)
+          * `replicate_model_id`: text (例如：`black-forest-labs/flux-kontext-pro`)
+          * `replicate_job_id`: text (Replicate任务的唯一ID，用于轮询状态)
+          * `status`: text (e.g., `pending`, `processing`, `completed`, `failed`)
+          * `processed_image_url`: text (Replicate生成并最终存储在Supabase Storage的图片URL)
+          * `error_message`: text (如果任务失败，记录错误信息)
+          * `created_at`: timestamp with time zone
+          * `updated_at`: timestamp with time zone
+          * `replicate_output_details`: jsonb (可选，存储Replicate返回的原始输出JSON，用于更详细的调试和分析)
+  * **Supabase RLS (Row Level Security)：**
+      * 开启RLS是强制性实践。
+      * 为 `users`, `conversations`, `chat_messages`, `image_tasks` 表配置RLS策略，确保用户只能访问和修改他们自己创建的数据。
+      * AI在设计数据模型和提供SQL schema时，应提醒配置RLS策略。
+  * **Supabase Storage：**
+      * 用于存储用户上传的原始图片和Replicate生成的图片。
+      * 需要配置合适的存储桶策略（Bucket Policies）和RLS，确保用户只能上传到自己的目录，并且只能访问自己有权限的图片。
+  * **索引规范：** 主键自动创建索引。外键字段必须创建索引。频繁查询字段（如 `user_id`, `created_at`, `conversation_id`）创建索引。
+
+**VI. AI 集成规范**
+
+  * **AI Agent 的核心组件与流程 (基于Agent文件中的基础概念):**
+      * **Model:** 使用高性能的LLM作为核心大脑，进行推理和决策。考虑使用OpenAI或其他具备强大指令遵循、上下文理解和工具使用能力的模型。
+      * **Tools:**
+          * **`callFluxKontextProTool(prompt: string, imageUrl?: string, options?: object)`:** 核心工具，用于调用Replicate的`flux-kontext-pro`接口。这个工具的`prompt`参数是关键，它会封装所有用户在多轮对话中表达的修图意图。
+          * **`uploadImageTool(file: File)`:** 辅助工具，用于处理用户上传图片到Supabase Storage，并返回可用的URL。
+          * **`saveConversationMessageTool(conversationId: string, role: string, content: string, imageUrl?: string)`:** 将对话消息保存到数据库，维持历史记录。
+          * **`saveImageTaskTool(taskId: string, details: object)`:** 更新或保存修图任务状态和结果。
+      * **Instructions:** 为LLM提供清晰的系统指令，使其：
+          * 扮演“对话式智能修图助手”的角色，友好、专业、耐心。
+          * 能够理解上下文，包括多轮对话中对同一张图片进行的连续编辑。
+          * 能够识别用户的修图意图（换背景、抠图、增加物体等），并将其转化为`flux-kontext-pro`接口所需的精确文本`prompt`。
+          * 知道何时提示用户上传图片，何时询问更详细的修图需求。
+          * 知道何时调用`callFluxKontextProTool`，以及如何从其输出中获取最终图片URL。
+          * 知道何时将生成的图片URL提供给用户。
+          * 在无法理解或执行时，能够礼貌地寻求澄清或告知用户。
+          * 遵循安全边界，拒绝不当请求。
+  * **多轮对话与上下文管理 (`backend/src/services/aiAgentService.ts` & `backend/src/services/conversationService.ts`)：**
+      * **历史消息检索：** 在每次LLM调用前，从 `chat_messages` 表中检索当前 `conversation_id` 下的最新K条历史消息（或直到达到Token限制），作为LLM的上下文输入。
+      * **Token管理：** 监控LLM输入Token量，避免超出模型限制。可以采用滑动窗口、摘要化历史对话等策略。
+      * **意图识别与状态跟踪：** LLM需要能够从多轮对话中识别当前的用户意图，并跟踪修图任务的状态（例如，用户已经上传了图片，现在正在描述背景）。
+      * **Prompt工程 (核心):**
+          * **系统Prompt：** 详细定义Agent角色、能力、交互方式、以及安全边界。
+          * **上下文整合Prompt：** 指导LLM如何利用历史对话（`chat_messages`）来理解当前用户指令的真正含义和补充信息。
+          * **工具调用Prompt：** 为`callFluxKontextProTool`等工具编写清晰、描述性的Function Calling提示，指导LLM何时调用哪个工具，以及如何填充其参数。
+          * **Flux-Kontext-Pro Prompt生成：** 这是最复杂也是最关键的Prompt工程。LLM需要根据用户在多轮对话中提供的所有信息，生成一个能让`flux-kontext-pro`精确理解并执行的单一、高质量的文本`prompt`。例如：
+              * 用户说：“把这张图背景换成森林。”
+              * 用户又说：“再在左边加一只可爱的小狗。”
+              * LLM需要将这些合并为类似：“`A photo of [original_subject_description] with a lush green forest background, and a cute small dog added on the left side of the image, detailed and realistic.`”
+  * **AI服务配置 (`backend/src/config/aiConfig.ts`)**
+    ```typescript
+    export const AI_CONFIG = {
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY, // 或其他LLM提供商的API密钥
+      REPLICATE_API_TOKEN: process.env.REPLICATE_API_TOKEN, // Replicate API密钥
+      LLM_MODEL: 'gpt-4o', // 或其他适合多轮对话和工具使用的模型
+      DEFAULT_IMAGE_MODEL: 'black-forest-labs/flux-kontext-pro', // Replicate模型ID
+      DEFAULT_IMAGE_PARAMS: { // 默认生图参数
+        width: 1024,
+        height: 1024,
+        // ...其他Replicate模型参数
+      },
+      MAX_CONTEXT_TOKENS: 4000, // LLM上下文最大Token限制
+      REQUEST_TIMEOUT: 60000, // AI请求超时时间
+      MAX_RETRY_COUNT: 3,
+    };
+    ```
+
+**VII. 安全规范**
+
+  * **API密钥管理：** 所有敏感信息（LLM API密钥、Replicate API Token、Supabase密钥等）必须通过环境变量管理，绝不能硬编码。在生产环境使用云服务商提供的密钥管理服务。
+  * **输入验证:**
+      * 前端验证：提供即时反馈，提升用户体验。
+      * 后端验证：所有用户输入（对话消息、上传的图片格式/大小/内容）必须在后端进行严格验证，防止注入攻击、恶意指令。
+      * AI在生成代码时应包含输入验证逻辑。
+  * **访问控制:**
+      * **认证 (Authentication)：** 优先使用Supabase Auth进行用户注册、登录、会话管理和JWT签发。
+          * **登录成功返回字段处理：** 在后端`authController`的登录成功逻辑中，从Supabase Auth返回的用户对象中提取`id` (作为`userId`)、`email`。`username`可能需要从`user_metadata`中获取或在`public.users`表中查询。`authProvider`可以根据登录方式（Email/Password或OAuth提供商）进行判断并返回。
+      * **授权 (Authorization)：**
+          * **Supabase RLS：** 在数据库层面启用并配置RLS策略，确保用户只能访问和修改他们有权限的数据（如自己的对话历史、修图任务和图片）。
+          * **后端业务逻辑授权：** 在后端业务逻辑层，根据用户角色和权限，进一步控制对敏感操作或数据的访问。
+  * **LLM Guardrails:**
+      * **输入Guardrails:**
+          * **Safety classifier:** 检测不安全输入（jailbreaks或prompt injections），防止恶意用户尝试绕过系统指令或提取敏感信息。
+          * **Relevance classifier:** 确保用户输入与修图主题相关。如果用户开始询问天气，可以提示其回到修图话题。
+          * **PII filter:** 过滤掉用户输入中可能包含的个人身份信息。
+          * **Rules-based protections:** 简单的黑名单、输入长度限制、regex过滤器来阻止已知威胁。
+      * **输出Guardrails:**
+          * 确保Agent的响应符合品牌调性，不生成不适当或有害的图片。
+      * **Tool Safeguards:**
+          * 由于`flux-kontext-pro`接口的强大能力，对其调用参数的验证尤为重要。确保LLM生成的`prompt`不包含恶意或违反内容政策的指令。
+          * 对高风险操作（例如，可能生成敏感内容）可以引入人工审核（Human-in-the-Loop）机制。
+      * AI提示：AI在生成Guardrail相关代码时，应遵循Agents SDK的乐观执行和Tripwire机制。
+
+**VIII. 测试规范**
+
+  * **单元测试：** 使用Jest (JS/TS) 或 Pytest (Python)。
+      * 初期聚焦核心业务逻辑：AI Agent的指令解析逻辑、`replicateService`的API调用和轮询、上下文管理、Supabase数据操作。
+      * AI应协助生成这些核心功能的测试用例。
+  * **API 测试：** 使用Supertest (Node.js) 或 Requests (Python)。
+      * 初期聚焦主要接口：用户认证（包括登录成功后返回的字段验证）、发送消息/获取历史、图片上传、修图任务提交和查询。
+  * **测试覆盖率要求：**
+      * 初期目标：关键业务逻辑覆盖率 ≥ 95%，API核心功能覆盖率 ≥ 60%。
+      * 长期目标：单元测试覆盖率 ≥ 80%，集成测试覆盖率 ≥ 60%。
+  * **端到端测试 (E2E)：**
+      * 利用Lovable在产品设计和用户体验阶段的洞察，为E2E测试提供场景和用户行为路径。
+      * AI可以协助构思用户故事和关键交互流程，作为E2E测试的输入，例如：
+          * 用户注册/登录 -\> 验证登录成功返回字段 -\> 上传图片A -\> 指令“换背景到海滩” -\> 检查生成的图片A' -\> 指令“再在左边加个椰子树” -\> 检查生成的图片A''。
+          * 用户登录 -\> 指令“帮我设计一张关于夏日派对的海报，主题是热情，文字：Join us\!” -\> 检查生成的海报。
+      * 推荐工具：Playwright 或 Cypress (前端E2E)。
+
+**IX. 部署规范**
+
+  * **环境管理：** 所有环境配置（开发、测试、生产）通过环境变量进行管理。Supabase URL和密钥、所有API密钥通过环境变量注入。
+  * **CI/CD 流程 (GitHub Actions)：**
+      * 利用GitHub Actions实现自动化测试、构建和部署。
+      * 单人简化流程：初期可以简化为 `main` 分支的 `push` 触发测试和部署。
+      * **`deploy.yml` 示例 (简化版)：**
+        ```yaml
+        name: Deploy AI Image Agent
+
+        on:
+          push:
+            branches: [main] # 仅在 main 分支 push 时触发
+
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@v2
+              - name: Setup Node.js
+                uses: actions/setup-node@v2
+                with:
+                  node-version: '20' # 或你使用的版本
+              - name: Install Frontend Dependencies
+                run: cd frontend && npm install
+              - name: Run Frontend Tests and Linter
+                run: cd frontend && npm test && npm run lint # 假设有测试和lint脚本
+              - name: Install Backend Dependencies
+                run: cd backend && npm install # 假设后端是Node.js
+              - name: Run Backend Tests and Linter
+                run: cd backend && npm test && npm run lint # 假设有测试和lint脚本
+
+          deploy:
+            needs: test # 依赖于测试通过
+            runs-on: ubuntu-latest
+            environment: production # 可以定义一个生产环境
+            env: # 注入生产环境的密钥
+              SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+              SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+              SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+              OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # 或其他LLM密钥
+              REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+              REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+              REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
+              REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }} # 你的后端API地址
+              APP_VERSION: ${{ github.sha }} # 自动注入版本号
+            steps:
+              - uses: actions/checkout@v2
+              - name: Build and Deploy Frontend
+                run: |
+                  cd frontend
+                  npm install
+                  npm run build
+                  # 部署到你的前端托管服务 (例如 Vercel, Netlify, GitHub Pages)
+                  # 例如: npx vercel deploy --prod --token ${{ secrets.VERCEL_TOKEN }}
+              - name: Build and Deploy Backend
+                run: |
+                  cd backend
+                  # 构建 Docker 镜像 (如果需要)
+                  # docker build -t ai-image-agent-backend .
+                  # 部署到你的后端托管服务 (例如 Heroku, AWS ECS, Google Cloud Run)
+                  # 例如: gcloud run deploy ai-image-agent-backend --image your-registry/ai-image-agent-backend --platform managed --region us-central1 --allow-unauthenticated
+        ```
+      * AI提示：AI应协助生成或修改GitHub Actions工作流文件。
+
+**X. 文档规范**
+
+  * **`README.md` 标准格式：**
+      * **项目名称：** 对话式智能修图助手
+      * **简短描述：** 强调多轮对话、AI驱动、Flux-Kontext-Pro集成、Lovable用户体验。
+      * **功能特性：** (例如：智能换背景、精准抠图、按描述添加物品/人物、创意海报设计、上下文理解、对话历史、图片预览)
+      * **技术栈：** (React, TypeScript, Node.js/Python, Supabase, Replicate Flux-Kontext-Pro, Cursor, GitHub, Lovable)
+      * **快速开始：** (包括Supabase项目配置、Replicate API Token配置)
+      * **API文档链接：** (使用OpenAPI/Swagger 格式)
+      * **部署说明：**
+      * **贡献：**
+      * **许可证：**
+      * AI应在项目初期协助生成此文件，并随着项目进展进行更新。
+  * **API 文档格式：** 使用OpenAPI 3.0 规范编写API文档。AI应协助维护API定义，并建议使用工具（如 Swagger UI）自动生成可交互的文档。
+
+**XI. 团队协作规范 (单人优化)**
+
+  * **Git 工作流程：**
+      * 分支策略：`main` (生产环境代码，稳定版本), `feature/*` (功能开发分支，从 `main` 分支拉取，开发完成后合并回 `main`)。
+      * 提交信息格式：`<type>(<scope>): <subject>\n\n<body>\n\n<footer>`。AI应严格遵循此格式生成提交信息建议。
+  * **代码审查规范 (自查/AI 辅助)：**
+      * 作为单人开发者，代码审查更多是“自查”和“AI 辅助审查”。
+      * AI应在代码生成或重构后，主动提供审查清单，帮助开发者进行自查。
+      * **必须审查的内容：** 代码逻辑正确性、安全性检查（特别是用户输入、LLM的Prompt输出、图片数据处理）、性能影响评估、代码规范遵循、测试覆盖率 (核心功能)。
+  * **发布流程 (单人简化)：**
+      * 预发布检查：运行完整测试套件 (CI/CD 自动完成)，检查关键业务逻辑测试覆盖率，手动验证核心功能。
+      * 发布步骤：确保 `main` 分支代码最新且通过所有测试 -\> 更新版本号 -\> 部署到生产环境 (CI/CD 自动触发) -\> 在 GitHub 上打 tag 并创建 release。
+      * 发布后：监控系统指标和日志，收集用户反馈。
+
+**XII. 监控和日志规范**
+
+  * **日志格式：** 使用结构化日志，便于日志分析工具处理。AI在生成日志代码时，应遵循此结构。
+    ```typescript
+    // 统一日志格式 (示例 for Backend)
+    const logger = {
+      info: (message, data = {}) => {
+        console.log(JSON.stringify({
+          level: 'info',
+          message,
+          data,
+          timestamp: new Date().toISOString(),
+          service: 'ai-image-agent',
+          version: process.env.APP_VERSION || '0.0.1',
+          // 额外字段用于多轮对话和修图任务追踪
+          conversationId: data.conversationId,
+          userId: data.userId,
+          replicateJobId: data.replicateJobId
+        }));
+      },
+      error: (message, error, data = {}) => {
+        console.error(JSON.stringify({
+          level: 'error',
+          message,
+          error: {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          },
+          data,
+          timestamp: new Date().toISOString(),
+          service: 'ai-image-agent',
+          version: process.env.APP_VERSION || '0.0.1',
+          conversationId: data.conversationId,
+          userId: data.userId,
+          replicateJobId: data.replicateJobId
+        }));
+      }
+    };
+    ```
+  * **关键指标监控：**
+      * **AI Agent性能：**
+          * LLM调用延迟
+          * LLM上下文Token使用量
+          * `flux-kontext-pro` API调用成功率和延迟
+          * 修图任务完成率和平均处理时间
+      * **用户行为：**
+          * 每日/每周活跃用户数
+          * 用户平均对话轮次
+          * 用户修图任务量
+      * **系统健康：**
+          * API响应时间
+          * 错误率 (前端、后端、Supabase、Replicate)
+          * 系统资源使用率 (CPU, 内存, 存储)
+      * AI提示：AI在设计功能时，应考虑如何方便地收集这些指标。
+
+-----

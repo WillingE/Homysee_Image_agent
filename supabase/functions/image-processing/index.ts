@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-import Replicate from "https://esm.sh/replicate@0.25.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,94 +22,52 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const replicate = new Replicate({ auth: replicateApiKey });
-
     const body = await req.json();
-    
-    // 如果是状态检查请求
-    if (body.task_id) {
-      const { data: task, error } = await supabase
-        .from('image_tasks')
-        .select('*')
-        .eq('id', body.task_id)
-        .single();
 
-      if (error) throw error;
-
-      // 如果任务还在进行中，检查Replicate状态
-      if (task.status === 'processing' && task.prediction_id) {
-        try {
-          const prediction = await replicate.predictions.get(task.prediction_id);
-          
-          if (prediction.status === 'succeeded') {
-            // 任务完成，更新数据库
-            const { error: updateError } = await supabase
-              .from('image_tasks')
-              .update({
-                status: 'completed',
-                processed_image_url: prediction.output[0],
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', task.id);
-
-            if (updateError) throw updateError;
-
-            // 更新聊天消息
-            await supabase
-              .from('chat_messages')
-              .update({
-                content: `图片处理完成！`,
-                image_url: prediction.output[0]
-              })
-              .eq('conversation_id', task.conversation_id)
-              .eq('role', 'assistant')
-              .order('created_at', { ascending: false })
-              .limit(1);
-
-            return new Response(JSON.stringify({
-              status: 'completed',
-              processed_image_url: prediction.output[0]
-            }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          } else if (prediction.status === 'failed') {
-            // 任务失败
-            await supabase
-              .from('image_tasks')
-              .update({
-                status: 'failed',
-                error_message: prediction.error || 'Processing failed',
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', task.id);
-
-            return new Response(JSON.stringify({
-              status: 'failed',
-              error: prediction.error
-            }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-        } catch (predictionError) {
-          console.error('Error checking prediction:', predictionError);
-        }
-      }
-
-      return new Response(JSON.stringify({
-        status: task.status,
-        processed_image_url: task.processed_image_url
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // 如果是新的处理请求
     const { original_image_url, prompt, conversation_id, user_id } = body;
 
+    console.log("=== NEW IMAGE PROCESSING REQUEST ===");
+    console.log("Request body:", { original_image_url, prompt, conversation_id, user_id });
+
     if (!original_image_url || !prompt) {
+      console.log("Missing required fields, returning 400");
       return new Response(
         JSON.stringify({ 
           error: "Missing required fields: original_image_url and prompt are required" 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
+    // 验证和清理图片URL
+    let cleanImageUrl = original_image_url.trim();
+    console.log("Original image URL:", original_image_url);
+    
+    // 确保URL是有效的HTTP/HTTPS链接
+    if (!cleanImageUrl.startsWith('http://') && !cleanImageUrl.startsWith('https://')) {
+      console.log("Invalid URL protocol, returning 400");
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid image URL: must be a valid HTTP/HTTPS URL" 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
+    // 验证URL格式
+    try {
+      const urlObj = new URL(cleanImageUrl);
+      cleanImageUrl = urlObj.href;
+      console.log("Using image URL:", cleanImageUrl);
+    } catch (urlError) {
+      console.error("Invalid URL format:", urlError);
+      return new Response(
+        JSON.stringify({ 
+          error: `Invalid image URL format: ${urlError.message}` 
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
@@ -124,7 +81,7 @@ serve(async (req) => {
       .insert({
         user_id: user_id,
         conversation_id: conversation_id,
-        original_image_url: original_image_url,
+        original_image_url: cleanImageUrl,
         prompt: prompt,
         status: 'processing'
       })
@@ -133,39 +90,112 @@ serve(async (req) => {
 
     if (taskError) throw taskError;
 
-    console.log("Starting image processing with prompt:", prompt);
+    console.log("Starting synchronous image processing with prompt:", prompt);
     
-    // 调用Replicate API进行图片处理
+    // 🚀 使用同步的 Replicate API 调用
     try {
-      const prediction = await replicate.predictions.create({
-        model: "fofr/flux-kontext-pro",
-        input: {
-          image: original_image_url,
-          prompt: prompt,
-          guidance_scale: 3.5,
-          num_inference_steps: 28,
-          enable_safety_checker: true
-        }
-      });
-
-      // 更新任务记录，保存prediction ID
-      await supabase
-        .from('image_tasks')
-        .update({
-          prediction_id: prediction.id
+      const response = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${replicateApiKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'wait'  // 🔑 关键：使请求同步等待完成
+        },
+        body: JSON.stringify({
+          input: {
+            input_image: cleanImageUrl,
+            prompt: prompt,
+            guidance_scale: 3.5,
+            num_inference_steps: 28,
+            enable_safety_checker: true,
+            aspect_ratio: "match_input_image",
+            output_format: "jpg",
+            safety_tolerance: 2
+          }
         })
-        .eq('id', task.id);
-
-      console.log("Image processing started with prediction ID:", prediction.id);
-
-      return new Response(JSON.stringify({ 
-        task_id: task.id,
-        prediction_id: prediction.id,
-        status: 'processing'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Replicate API error:", response.status, errorText);
+        throw new Error(`Replicate API error: ${response.status} ${errorText}`);
+      }
+
+      const prediction = await response.json();
+      console.log("Synchronous processing completed:", prediction);
+
+      // 🔧 修改判断逻辑：只要有output且没有error就是成功
+      if (prediction.output && !prediction.error) {
+        const processedImageUrl = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
+        
+        // 更新任务状态为完成
+        await supabase
+          .from('image_tasks')
+          .update({
+            status: 'completed',
+            processed_image_url: processedImageUrl,
+            prediction_id: prediction.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', task.id);
+
+        console.log("Task completed successfully:", processedImageUrl);
+
+        return new Response(JSON.stringify({ 
+          task_id: task.id,
+          status: 'completed',
+          processed_image_url: processedImageUrl,
+          prediction_id: prediction.id
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+
+      } else if (prediction.error) {
+        // 有明确的错误信息
+        console.error("Processing failed with error:", prediction.error);
+        
+        await supabase
+          .from('image_tasks')
+          .update({
+            status: 'failed',
+            error_message: prediction.error,
+            prediction_id: prediction.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', task.id);
+
+        return new Response(JSON.stringify({ 
+          task_id: task.id,
+          status: 'failed',
+          error: prediction.error
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        });
+      } else {
+        // 既没有输出也没有错误，可能仍在处理中（不应该发生在同步调用中）
+        console.error("Unexpected: No output and no error:", prediction);
+        
+        await supabase
+          .from('image_tasks')
+          .update({
+            status: 'failed',
+            error_message: 'No output received from processing service',
+            prediction_id: prediction.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', task.id);
+
+        return new Response(JSON.stringify({ 
+          task_id: task.id,
+          status: 'failed',
+          error: 'No output received from processing service'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        });
+      }
 
     } catch (replicateError) {
       console.error("Replicate API error:", replicateError);
@@ -179,7 +209,14 @@ serve(async (req) => {
         })
         .eq('id', task.id);
 
-      throw replicateError;
+      return new Response(JSON.stringify({ 
+        task_id: task.id,
+        status: 'failed',
+        error: replicateError.message || 'Replicate API error'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
     }
 
   } catch (error) {
