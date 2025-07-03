@@ -1,0 +1,54 @@
+{
+  "header": {
+    "profile": "个人资料",
+    "settings": "设置",
+    "logout": "退出登录",
+    "user": "用户"
+  },
+  "sidebar": {
+    "newChat": "新建对话",
+    "loading": "加载中...",
+    "noConversations": "暂无对话",
+    "deleteConversationTitle": "删除对话",
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}}分钟前",
+    "hoursAgo": "{{count}}小时前",
+    "daysAgo": "{{count}}天前"
+  },
+  "chat": {
+    "placeholder": "描述您的图片编辑需求...",
+    "thinking": "AI正在思考...",
+    "welcome": "你好！我是您的AI图片编辑助手。我可以帮助您进行背景更换、物体移除、添加元素等操作。上传图片或描述您想要的效果！",
+    "startConversation": "创建新对话开始聊天",
+    "changeBg": "更换背景",
+    "removeObject": "移除物体",
+    "addElement": "添加元素"
+  },
+  "imagePreview": {
+    "title": "收藏图片",
+    "downloadAll": "下载全部",
+    "zipping": "打包中...",
+    "imageCount_one": "{{count}} 张图片",
+    "imageCount_other": "{{count}} 张图片",
+    "noFavoritesTitle": "暂无收藏图片",
+    "noFavoritesDescription": "在对话中点击图片上的心形按钮来收藏图片",
+    "favoritesFrom": "\"{{title}}\" 的收藏",
+    "favoritesCurrent": "当前对话的收藏图片",
+    "downloadImage": "下载图片",
+    "unfavorite": "取消收藏"
+  },
+  "toasts": {
+    "zippingImages": "正在打包收藏图片...",
+    "zippingPrepare": "准备压缩 {{count}} 张图片，请稍候。",
+    "zippingComplete": "打包完成",
+    "zipDownloadStarted": "{{fileName}} 已开始下载。",
+    "zipFailed": "打包失败",
+    "zipFailedDescription": "无法创建压缩文件，请检查控制台获取更多信息。",
+    "conversationDeleted": "对话已删除",
+    "conversationDeletedDescription": "该对话已成功删除。",
+    "imageFavorited": "收藏成功",
+    "imageFavoritedDescription": "图片已添加到收藏。",
+    "imageUnfavorited": "已取消收藏",
+    "imageUnfavoritedDescription": "图片已从收藏中移除。"
+  }
+} 

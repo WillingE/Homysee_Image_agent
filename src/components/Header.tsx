@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import aiAvatar from '@/assets/ai-avatar.jpg';
 
 interface HeaderProps {
   className?: string;
@@ -34,14 +35,12 @@ const Header = ({ className }: HeaderProps) => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo & Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-ai-primary to-ai-secondary flex items-center justify-center shadow-lg">
-            <Sparkles className="w-6 h-6 text-white" />
-          </div>
+          <Avatar>
+            <AvatarImage src={aiAvatar} alt="AI Assistant" />
+            <AvatarFallback>AI</AvatarFallback>
+          </Avatar>
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-ai-primary to-ai-secondary bg-clip-text text-transparent">
-              AI Image Studio
-            </h1>
-            <p className="text-xs text-muted-foreground">Powered by Flux-Kontext-Pro</p>
+            <h1 className="text-lg font-semibold">Lovelace Image Whisperer</h1>
           </div>
         </div>
 

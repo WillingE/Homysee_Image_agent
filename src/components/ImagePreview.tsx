@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Download, Share, Sparkles, Heart, Loader2 } from 'lucide-react';
+import { Download, Heart, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useConversations } from '@/hooks/useConversations';
 import { useToast } from '@/hooks/use-toast';
@@ -18,8 +17,6 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
   const {
     currentConversation,
     favoriteImages,
-    isImageProcessing,
-    imageProcessingProgress,
     unfavoriteImage,
   } = useConversations();
 
@@ -41,8 +38,8 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
 
     setIsZipping(true);
     toast({
-      title: '正在打包收藏图片...',
-      description: `准备压缩 ${favoriteImages.length} 张图片，请稍候。`,
+      title: 'Zipping images...',
+      description: `Preparing to compress ${favoriteImages.length} images, please wait.`,
     });
 
     try {
@@ -52,13 +49,13 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
         try {
           const response = await fetch(image.image_url);
           if (!response.ok) {
-            throw new Error(`无法获取图片: ${image.image_url}`);
+            throw new Error(`Unable to fetch image: ${image.image_url}`);
           }
           const blob = await response.blob();
           const filename = image.image_url.split('/').pop()?.split('?')[0] || `image_${image.id}.jpg`;
           zip.file(filename, blob);
         } catch (fetchError) {
-          console.error(`跳过无法下载的图片: ${image.image_url}`, fetchError);
+          console.error(`Skipping image that couldn't be downloaded: ${image.image_url}`, fetchError);
         }
       });
 
@@ -77,15 +74,15 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
       URL.revokeObjectURL(link.href);
 
       toast({
-        title: '打包完成',
-        description: `${zipFileName} 已开始下载。`,
+        title: 'Zipping completed',
+        description: `${zipFileName} has started downloading.`,
       });
 
     } catch (error) {
-      console.error('创建压缩文件失败', error);
+      console.error('Failed to create zip file', error);
       toast({
-        title: '打包失败',
-        description: '无法创建压缩文件，请检查控制台获取更多信息。',
+        title: 'Zipping failed',
+        description: 'Unable to create zip file, please check console for more information.',
         variant: 'destructive',
       });
     } finally {
@@ -99,7 +96,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
       <div className="flex items-center justify-between p-4 border-b border-message-border bg-gradient-to-r from-ai-secondary/10 to-ai-accent/10">
         <div className="flex items-center gap-2">
           <Heart className="w-5 h-5 text-ai-secondary" />
-          <h3 className="font-semibold text-foreground">收藏图片</h3>
+          <h3 className="font-semibold text-foreground">Favorite Images</h3>
         </div>
         <div className="flex items-center gap-2">
           {favoriteImages.length > 0 && (
@@ -114,49 +111,27 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
               ) : (
                 <Download className="w-4 h-4 mr-2" />
               )}
-              {isZipping ? '打包中...' : '下载全部'}
+              {isZipping ? 'Zipping...' : 'Download All'}
             </Button>
           )}
           <Badge variant="outline" className="text-xs border-ai-secondary/30 text-ai-secondary">
-            {favoriteImages.length} 张图片
+            {favoriteImages.length} {favoriteImages.length === 1 ? 'image' : 'images'}
           </Badge>
         </div>
       </div>
 
       {/* Preview Area */}
       <div className="flex-1 flex flex-col min-h-0">
-        {favoriteImages.length === 0 && !isImageProcessing ? (
+        {favoriteImages.length === 0 ? (
           <div className="p-4 h-full flex flex-col items-center justify-center text-center space-y-4">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-ai-primary/20 to-ai-secondary/20 flex items-center justify-center">
               <Heart className="w-12 h-12 text-ai-primary" />
             </div>
             <div className="space-y-2">
-              <h4 className="text-lg font-semibold text-foreground">暂无收藏图片</h4>
+              <h4 className="text-lg font-semibold text-foreground">No Favorite Images</h4>
               <p className="text-sm text-muted-foreground max-w-sm">
-                在对话中点击图片上的心形按钮来收藏图片
+                Click the heart icon on an image in the chat to save it here.
               </p>
-            </div>
-          </div>
-        ) : isImageProcessing ? (
-          <div className="p-4 h-full flex flex-col items-center justify-center space-y-6">
-            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-ai-primary/20 to-ai-secondary/20 flex items-center justify-center relative">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ai-primary to-ai-secondary animate-spin opacity-20"></div>
-              <Sparkles className="w-16 h-16 text-ai-primary animate-pulse" />
-            </div>
-            
-            <div className="text-center space-y-2">
-              <h4 className="text-lg font-semibold text-foreground">AI Processing Images</h4>
-              <p className="text-sm text-muted-foreground">
-                正在处理收藏的图片...
-              </p>
-            </div>
-            
-            <div className="w-full max-w-sm space-y-2">
-              <Progress value={imageProcessingProgress} className="h-2" />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Processing</span>
-                <span>{imageProcessingProgress}%</span>
-              </div>
             </div>
           </div>
         ) : (
@@ -171,7 +146,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
                       className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => setSelectedImage(image.image_url)}
                       onError={(e) => {
-                        console.error('图片加载失败:', image.image_url);
+                        console.error('Image loading failed:', image.image_url);
                       }}
                     />
                   </div>
@@ -183,7 +158,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
                       size="sm"
                       className="h-8 w-8 p-0 rounded-full shadow-md backdrop-blur-sm bg-white/20 hover:bg-white/30 text-white"
                       onClick={() => handleDownload(image.image_url)}
-                      title="下载图片"
+                      title="Download image"
                     >
                       <Download className="w-4 h-4" />
                     </Button>
@@ -192,7 +167,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
                       size="sm"
                       className="h-8 w-8 p-0 rounded-full shadow-md backdrop-blur-sm bg-red-500/20 hover:bg-red-500/30 text-red-500"
                       onClick={() => unfavoriteImage(image.message_id)}
-                      title="取消收藏"
+                      title="Unfavorite"
                     >
                       <Heart className="w-4 h-4 fill-current" />
                     </Button>
@@ -226,7 +201,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
       <div className="p-3 border-t border-message-border bg-gradient-to-r from-agent-message to-chat-surface">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>
-            {currentConversation?.title ? `${currentConversation.title} 的收藏` : '当前对话的收藏图片'}
+            {currentConversation?.title ? `Favorites from "${currentConversation.title}"` : 'Favorites from current chat'}
           </span>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 bg-status-success rounded-full"></div>

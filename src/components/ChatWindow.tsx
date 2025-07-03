@@ -5,13 +5,44 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Send, Image, Upload, Sparkles, Heart, HeartHandshake } from 'lucide-react';
+import { Send, Image, Upload, Sparkles, Heart, HeartHandshake, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import aiAvatar from '@/assets/ai-avatar.jpg';
-import { useConversations } from '@/hooks/useConversations';
+import { useConversations, ChatMessage } from '@/hooks/useConversations';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+
+interface StagedImagePreviewProps {
+  file: File;
+  onRemove: () => void;
+}
+
+const StagedImagePreview = ({ file, onRemove }: StagedImagePreviewProps) => {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  if (!previewUrl) return null;
+
+  return (
+    <div className="relative group flex-shrink-0">
+      <img src={previewUrl} alt={file.name} className="w-16 h-16 rounded-md object-cover" />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute -top-2 -right-2 w-5 h-5 rounded-full opacity-100 group-hover:opacity-100 bg-black/50 hover:bg-black/70 text-white"
+        onClick={onRemove}
+      >
+        <X className="w-3 h-3" />
+      </Button>
+    </div>
+  );
+};
 
 interface ChatWindowProps {
   className?: string;
@@ -26,7 +57,6 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     createConversation,
     addMessage,
     updateCurrentImage,
-    updateImageProcessing,
     favoriteImage,
     unfavoriteImage,
     isImageFavorited
@@ -35,7 +65,9 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
   const { toast } = useToast();
   
   const [inputMessage, setInputMessage] = useState('');
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,29 +86,54 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
   };
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
+    if ((!inputMessage.trim() && stagedFiles.length === 0) || isSending || isLoading) return;
     
     let conversation = currentConversation;
     if (!conversation) {
-      conversation = await createConversation('新对话');
+      const newTitle = inputMessage.trim().substring(0, 30) || 'Image Analysis';
+      conversation = await createConversation(newTitle);
       if (!conversation) return;
     }
 
-    setIsLoading(true);
-    updateImageProcessing(true, 0);
+    setIsSending(true);
+
     const messageContent = inputMessage;
+    const filesToUpload = stagedFiles;
     setInputMessage('');
-
+    setStagedFiles([]);
+    
+    let messageSent = false;
     try {
-      // 发送用户消息
-      const userMessage = await sendMessage(messageContent);
-      if (!userMessage) throw new Error('Failed to send message');
+      let uploadedImageUrls: string[] = [];
+      if (filesToUpload.length > 0) {
+        const uploadPromises = filesToUpload.map(file => uploadImage(file));
+        const results = await Promise.all(uploadPromises);
+        uploadedImageUrls = results.filter((url): url is string => !!url);
 
-      // 调用AI Agent
+        if (uploadedImageUrls.length !== filesToUpload.length) {
+          toast({
+            title: 'Some images failed to upload',
+            description: 'Not all images were uploaded successfully, please try again.',
+            variant: 'destructive',
+          });
+        }
+      }
+
+      if (uploadedImageUrls.length === 0 && !messageContent.trim()) {
+        throw new Error("No content to send.");
+      }
+
+      const userMessage = await sendMessage(messageContent, uploadedImageUrls, conversation);
+      if (!userMessage) throw new Error('Failed to send message');
+      
+      messageSent = true;
+      setIsLoading(true);
+
       const response = await supabase.functions.invoke('ai-chat-agent', {
         body: {
           conversationId: conversation.id,
-          userMessage: messageContent
+          userMessage: messageContent || `Uploaded ${uploadedImageUrls.length} image(s)`,
+          imageUrl: uploadedImageUrls[0]
         }
       });
 
@@ -84,47 +141,25 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
         throw new Error(response.error.message || 'AI service error');
       }
 
-      // 立即显示AI回复
       if (response.data.message) {
         addMessage(response.data.message);
-      }
-
-      // 🚀 如果需要图片处理，直接处理结果（不再需要轮询）
-      if (response.data?.requiresImageProcessing && response.data?.message?.image_url) {
-        // image_url 现在包含的是task_id，但由于我们改为同步处理，
-        // 我们需要检查AI agent是否已经返回了处理完成的图片
-        const taskId = response.data.message.image_url;
-        
-        // 检查是否是有效的URL（处理完成的图片）
-        if (taskId && taskId.startsWith('http')) {
-          // 已经是完成的图片URL，直接显示
-          console.log("✅ Image processing completed, URL:", taskId);
-          updateCurrentImage(taskId);
-          updateImageProcessing(false, 100);
-          toast({
-            title: '图片处理完成',
-            description: '您的图片已经处理完成！',
-          });
-        } else {
-          // 显示处理状态并等待后续更新
-          console.log("🔄 Image processing task created:", taskId);
-          updateImageProcessing(true, 50);
-        }
       }
 
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
-        title: '发送失败',
-        description: error instanceof Error ? error.message : '发送消息时出错',
+        title: 'Failed to send',
+        description: error instanceof Error ? error.message : 'An error occurred while sending the message.',
         variant: 'destructive'
       });
-      
-      // 添加错误消息
-      await addAIResponse('抱歉，我遇到了一些问题，请稍后再试。');
+
+      if (!messageSent) {
+        setInputMessage(messageContent);
+        setStagedFiles(filesToUpload);
+      }
     } finally {
+      setIsSending(false);
       setIsLoading(false);
-      updateImageProcessing(false, 0);
     }
   };
 
@@ -135,86 +170,19 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     }
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      console.log('No file selected');
-      return;
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+    
+    setStagedFiles(prev => [...prev, ...Array.from(files)]);
+    
+    if (event.target) {
+      event.target.value = '';
     }
+  };
 
-    console.log('Image upload started for file:', file.name);
-
-    let conversation = currentConversation;
-    if (!conversation) {
-      console.log('Creating new conversation for image upload');
-      conversation = await createConversation('图片编辑');
-      if (!conversation) {
-        console.error('Failed to create conversation');
-        return;
-      }
-    }
-
-    try {
-      setIsLoading(true);
-      updateImageProcessing(true, 20);
-      
-      // 上传图片到 Supabase Storage
-      console.log('Uploading image to storage...');
-      const imageUrl = await uploadImage(file);
-      
-      if (!imageUrl) {
-        throw new Error('图片上传失败，未获得有效URL');
-      }
-
-      console.log('Image uploaded successfully, URL:', imageUrl);
-      updateCurrentImage(imageUrl);
-      updateImageProcessing(true, 50);
-      
-      // 发送带图片的消息
-      console.log('Sending message with image...');
-      const userMessage = await sendMessage('我上传了一张图片，请帮我分析一下', imageUrl, conversation);
-      
-      if (!userMessage) {
-        throw new Error('消息发送失败');
-      }
-
-      console.log('Message sent successfully, calling AI agent...');
-      updateImageProcessing(true, 70);
-      
-      // 调用AI分析图片
-      const response = await supabase.functions.invoke('ai-chat-agent', {
-        body: {
-          conversationId: conversation.id,
-          userMessage: '我上传了一张图片，请帮我分析一下可以做什么编辑',
-          imageUrl
-        }
-      });
-
-      console.log('AI agent response:', response);
-
-      if (response.error) {
-        console.error('AI agent error:', response.error);
-        throw new Error(response.error.message || 'AI service error');
-      }
-
-      // 立即显示AI回复
-      if (response.data.message) {
-        addMessage(response.data.message);
-      }
-
-      updateImageProcessing(false, 100);
-
-    } catch (error) {
-      console.error('Error in handleImageUpload:', error);
-      toast({
-        title: '上传失败',
-        description: error instanceof Error ? error.message : '图片上传时出错',
-        variant: 'destructive'
-      });
-      updateImageProcessing(false, 0);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleRemoveStagedImage = (indexToRemove: number) => {
+    setStagedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
   return (
@@ -228,7 +196,6 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
           </Avatar>
           <div>
             <h3 className="font-semibold text-foreground">AI Image Assistant</h3>
-            <p className="text-sm text-muted-foreground">Powered by Flux-Kontext-Pro</p>
           </div>
         </div>
         <Badge variant="secondary" className="bg-ai-primary/20 text-ai-primary border-ai-primary/30">
@@ -242,7 +209,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
         <div className="space-y-4">
           {!currentConversation ? (
             <div className="text-center py-8 text-muted-foreground">
-              <p>创建新对话开始聊天</p>
+              <p>Start a new conversation to begin</p>
             </div>
           ) : messages.length === 0 ? (
             <div className="flex gap-3 animate-fade-in">
@@ -252,12 +219,18 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
               </Avatar>
               <div className="bg-agent-message border border-message-border rounded-lg px-4 py-2 max-w-[80%]">
                 <p className="text-sm leading-relaxed">
-                  你好！我是您的AI图片编辑助手。我可以帮助您进行背景更换、物体移除、添加元素等操作。上传图片或描述您想要的效果！
+                  Hi! I'm your AI image assistant. I can help with background changes, object removal, and more. Upload an image or describe what you'd like to do!
                 </p>
               </div>
             </div>
           ) : (
-            messages.map((message) => (
+            messages.map((message) => {
+              const allImageUrls = [
+                ...(message.image_url ? [message.image_url] : []),
+                ...(message.additional_image_urls || [])
+              ];
+
+              return (
               <div
                 key={message.id}
                 className={cn(
@@ -280,38 +253,42 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                       : 'bg-agent-message border border-message-border'
                   )}
                 >
-                  {message.image_url && (
-                    <div className="mb-2 relative group">
-                      <img 
-                        src={message.image_url} 
-                        alt="Uploaded" 
-                        className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => updateCurrentImage(message.image_url, message.id)}
-                        title="点击在右侧预览区域查看大图"
-                      />
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={cn(
-                            "h-8 w-8 p-0 rounded-full shadow-md backdrop-blur-sm",
-                            isImageFavorited(message.id) 
-                              ? "bg-red-500/20 hover:bg-red-500/30 text-red-500" 
-                              : "bg-white/20 hover:bg-white/30 text-white"
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFavoriteClick(message);
-                          }}
-                          title={isImageFavorited(message.id) ? "取消收藏" : "收藏图片"}
-                        >
-                          {isImageFavorited(message.id) ? (
-                            <Heart className="w-4 h-4 fill-current" />
-                          ) : (
-                            <Heart className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
+                  {allImageUrls.length > 0 && (
+                    <div className="mb-2 relative group grid gap-2" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(120px, 1fr))` }}>
+                      {allImageUrls.map((url, index) => (
+                        <div key={index} className="aspect-square bg-agent-message rounded-lg border border-message-border overflow-hidden relative group/image">
+                          <img 
+                            src={url} 
+                            alt={`Uploaded ${index + 1}`}
+                            className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => updateCurrentImage(url, message.id)}
+                            title="Click to view in the right preview area"
+                          />
+                           <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                "h-7 w-7 p-0 rounded-full shadow-md backdrop-blur-sm",
+                                isImageFavorited(message.id) 
+                                  ? "bg-red-500/20 hover:bg-red-500/30 text-red-500" 
+                                  : "bg-white/20 hover:bg-white/30 text-white"
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFavoriteClick(message);
+                              }}
+                              title={isImageFavorited(message.id) ? "Unfavorite" : "Favorite"}
+                            >
+                              {isImageFavorited(message.id) ? (
+                                <Heart className="w-4 h-4 fill-current" />
+                              ) : (
+                                <Heart className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                   <p className="text-sm leading-relaxed">{message.content}</p>
@@ -328,7 +305,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                   </Avatar>
                 )}
               </div>
-            ))
+            )})
           )}
           
           {isLoading && (
@@ -344,7 +321,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                     <div className="w-2 h-2 bg-ai-primary rounded-full animate-bounce [animation-delay:0.1s]"></div>
                     <div className="w-2 h-2 bg-ai-primary rounded-full animate-bounce [animation-delay:0.2s]"></div>
                   </div>
-                  <span className="text-sm text-muted-foreground">AI正在思考...</span>
+                  <span className="text-sm text-muted-foreground">AI is thinking...</span>
                 </div>
               </div>
             </div>
@@ -354,6 +331,15 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
 
       {/* Input Area */}
       <div className="p-4 border-t border-message-border bg-gradient-to-r from-chat-surface to-agent-message">
+        {stagedFiles.length > 0 && (
+          <div className="mb-2 p-2 border-b border-message-border">
+              <div className="flex gap-2 pb-2">
+                {stagedFiles.map((file, index) => (
+                  <StagedImagePreview key={index} file={file} onRemove={() => handleRemoveStagedImage(index)} />
+                ))}
+              </div>
+          </div>
+        )}
         <div className="flex gap-2">
           <input
             type="file"
@@ -361,6 +347,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
             onChange={handleImageUpload}
             accept="image/*"
             className="hidden"
+            multiple
           />
           <Button
             variant="outline"
@@ -377,17 +364,16 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="描述您的图片编辑需求..."
+              placeholder="Describe your image editing needs..."
               className="pr-12 bg-input border-message-border focus:border-ai-primary/50 focus:ring-ai-primary/30"
-              disabled={isLoading || !currentConversation}
             />
             <Button
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading || !currentConversation}
+              disabled={(!inputMessage.trim() && stagedFiles.length === 0) || isSending || isLoading}
               size="icon"
               className="absolute right-1 top-1 h-8 w-8 bg-ai-primary hover:bg-ai-primary-dark"
             >
-              <Send className="w-4 h-4" />
+              {isSending || isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
           </div>
         </div>
@@ -398,34 +384,34 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
             size="sm" 
             className="text-xs text-muted-foreground hover:text-ai-primary"
             onClick={() => {
-              setInputMessage('更换背景为：');
+              setInputMessage('Change background to: ');
               document.getElementById('chat-input')?.focus();
             }}
           >
             <Image className="w-3 h-3 mr-1" />
-            更换背景
+            Change BG
           </Button>
           <Button 
             variant="ghost" 
             size="sm" 
             className="text-xs text-muted-foreground hover:text-ai-primary"
             onClick={() => {
-              setInputMessage('移除图中的：');
+              setInputMessage('Remove object: ');
               document.getElementById('chat-input')?.focus();
             }}
           >
-            移除物体
+            Remove Object
           </Button>
           <Button 
             variant="ghost" 
             size="sm" 
             className="text-xs text-muted-foreground hover:text-ai-primary"
             onClick={() => {
-              setInputMessage('在图中添加：');
+              setInputMessage('Add element: ');
               document.getElementById('chat-input')?.focus();
             }}
           >
-            添加元素
+            Add Element
           </Button>
         </div>
       </div>

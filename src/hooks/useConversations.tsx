@@ -10,6 +10,7 @@ export interface Conversation {
   created_at: string;
   updated_at: string;
   user_id: string;
+  thumbnail_url?: string | null;
 }
 
 export interface ChatMessage {
@@ -19,6 +20,7 @@ export interface ChatMessage {
   content: string;
   image_url?: string;
   created_at: string;
+  additional_image_urls?: string[];
 }
 
 // 1. Define the context type
@@ -30,20 +32,18 @@ interface ConversationsContextType {
   loading: boolean;
   currentImage: string | null;
   currentImageInfo: any; // Using 'any' for simplicity, can be typed further
-  isImageProcessing: boolean;
-  imageProcessingProgress: number;
   createConversation: (title?: string) => Promise<Conversation | null>;
   selectConversation: (conversation: Conversation) => Promise<void>;
   deleteConversation: (conversationId: string) => Promise<boolean>;
-  sendMessage: (content: string, imageUrl?: string, targetConversation?: Conversation) => Promise<ChatMessage | null>;
+  sendMessage: (content: string, imageUrls: string[], targetConversation?: Conversation) => Promise<ChatMessage | null>;
   addAIResponse: (content: string, imageUrl?: string) => Promise<ChatMessage | null>;
   addMessage: (message: ChatMessage) => void;
   updateCurrentImage: (imageUrl: string | null, messageId?: string) => void;
-  updateImageProcessing: (processing: boolean, progress?: number) => void;
   favoriteImage: (message: ChatMessage) => Promise<boolean>;
   unfavoriteImage: (messageId: string) => Promise<boolean>;
   isImageFavorited: (messageId: string) => boolean;
   loadConversations: () => Promise<void>;
+  updateConversationThumbnail: (conversationId: string, thumbnailUrl: string) => Promise<void>;
 }
 
 // 2. Create the Context
@@ -58,8 +58,6 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
   const [loading, setLoading] = useState(true);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   const [currentImageInfo, setCurrentImageInfo] = useState<any | null>(null);
-  const [isImageProcessing, setIsImageProcessing] = useState(false);
-  const [imageProcessingProgress, setImageProcessingProgress] = useState(0);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -80,8 +78,8 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     } catch (error) {
       console.error('Error loading conversations:', error);
       toast({
-        title: '加载对话失败',
-        description: '无法加载对话列表',
+        title: 'Failed to load conversations',
+        description: 'Could not load the conversation list.',
         variant: 'destructive'
       });
     } finally {
@@ -103,7 +101,7 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
 
       if (error) {
         if (error.code === '42P01' || error.message?.includes('relation "public.favorite_images" does not exist')) {
-          console.log('收藏图片表尚未创建');
+          console.log('Favorites table not created yet.');
           setFavoriteImages([]);
           return;
         }
@@ -135,16 +133,16 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
       if (error) {
         if (error.code === '23505') {
           toast({
-            title: '已收藏',
-            description: '该图片已经收藏过了',
+            title: 'Already favorited',
+            description: 'This image is already in your favorites.',
             variant: 'default'
           });
           return false;
         }
         if (error.code === '42P01' || error.message?.includes('relation "public.favorite_images" does not exist')) {
           toast({
-            title: '功能尚未启用',
-            description: '收藏图片功能需要数据库配置，请联系管理员',
+            title: 'Feature not enabled',
+            description: 'Favorites require database setup. Please contact an admin.',
             variant: 'destructive'
           });
           return false;
@@ -154,15 +152,15 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
 
       setFavoriteImages(prev => [data as unknown as FavoriteImage, ...prev]);
       toast({
-        title: '收藏成功',
-        description: '图片已添加到收藏',
+        title: 'Image favorited',
+        description: 'The image has been added to your favorites.',
       });
       return true;
     } catch (error) {
       console.error('Error favoriting image:', error);
       toast({
-        title: '收藏失败',
-        description: '请检查网络连接或联系管理员',
+        title: 'Failed to favorite',
+        description: 'Please check your connection or contact an admin.',
         variant: 'destructive'
       });
       return false;
@@ -184,15 +182,15 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
 
       setFavoriteImages(prev => prev.filter(fav => fav.message_id !== messageId));
       toast({
-        title: '已取消收藏',
-        description: '图片已从收藏中移除',
+        title: 'Image unfavorited',
+        description: 'The image has been removed from your favorites.',
       });
       return true;
-    } catch (error) {
+    } catch (error)      {
       console.error('Error unfavoriting image:', error);
       toast({
-        title: '取消收藏失败',
-        description: '无法取消收藏图片',
+        title: 'Failed to unfavorite',
+        description: 'Could not remove the image from your favorites.',
         variant: 'destructive'
       });
       return false;
@@ -238,8 +236,8 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     } catch (error) {
       console.error('Error loading messages:', error);
       toast({
-        title: '加载消息失败',
-        description: '无法加载对话消息',
+        title: 'Failed to load messages',
+        description: 'Could not load messages for this conversation.',
         variant: 'destructive'
       });
     }
@@ -276,8 +274,8 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     } catch (error) {
       console.error('Error creating conversation:', error);
       toast({
-        title: '创建对话失败',
-        description: '无法创建新对话',
+        title: 'Failed to create conversation',
+        description: 'Could not create a new conversation.',
         variant: 'destructive'
       });
       return null;
@@ -306,16 +304,16 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
       }
       
       toast({
-        title: '删除成功',
-        description: '对话已删除',
+        title: 'Conversation deleted',
+        description: 'The conversation has been successfully deleted.',
       });
       
       return true;
     } catch (error) {
       console.error('Error deleting conversation:', error);
       toast({
-        title: '删除失败',
-        description: '无法删除对话',
+        title: 'Failed to delete',
+        description: 'Could not delete the conversation.',
         variant: 'destructive'
       });
       return false;
@@ -323,10 +321,20 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
   };
   
   // 发送消息
-  const sendMessage = async (content: string, imageUrl?: string, targetConversation?: Conversation) => {
+  const sendMessage = async (content: string, imageUrls: string[] = [], targetConversation?: Conversation) => {
     const conversation = targetConversation || currentConversation;
     if (!conversation || !user) return null;
 
+    const [firstImageUrl, ...additionalImageUrls] = imageUrls;
+
+    if (firstImageUrl && !conversation.thumbnail_url) {
+      // Manually update the local object before the async call to prevent race conditions
+      const updatedConversation = { ...conversation, thumbnail_url: firstImageUrl };
+      setCurrentConversation(updatedConversation);
+      setConversations(prev => prev.map(c => c.id === conversation.id ? updatedConversation : c));
+      await updateConversationThumbnail(conversation.id, firstImageUrl);
+    }
+    
     try {
       const { data, error } = await supabase
         .from('chat_messages')
@@ -334,7 +342,8 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
           conversation_id: conversation.id,
           role: 'user',
           content,
-          image_url: imageUrl
+          image_url: firstImageUrl,
+          additional_image_urls: additionalImageUrls.length > 0 ? additionalImageUrls : null,
         })
         .select()
         .single();
@@ -346,8 +355,8 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
-        title: '发送消息失败',
-        description: error instanceof Error ? error.message : '无法发送消息',
+        title: 'Failed to send message',
+        description: error instanceof Error ? error.message : 'The message could not be sent.',
         variant: 'destructive'
       });
       return null;
@@ -357,6 +366,13 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
   // 添加AI回复
   const addAIResponse = async (content: string, imageUrl?: string) => {
     if (!currentConversation) return null;
+
+    if (imageUrl && !currentConversation.thumbnail_url) {
+      const updatedConversation = { ...currentConversation, thumbnail_url: imageUrl };
+      setCurrentConversation(updatedConversation);
+      setConversations(prev => prev.map(c => c.id === currentConversation.id ? updatedConversation : c));
+      await updateConversationThumbnail(currentConversation.id, imageUrl);
+    }
 
     try {
       const { data, error } = await supabase
@@ -427,9 +443,24 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     }
   };
 
-  const updateImageProcessing = (processing: boolean, progress: number = 0) => {
-    setIsImageProcessing(processing);
-    setImageProcessingProgress(progress);
+  const updateConversationThumbnail = async (conversationId: string, thumbnailUrl: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .update({ thumbnail_url: thumbnailUrl } as any)
+        .eq('id', conversationId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      setConversations(prev => prev.map(c => c.id === conversationId ? c : c));
+      if (currentConversation?.id === conversationId) {
+        setCurrentConversation(data as Conversation);
+      }
+    } catch (error) {
+      console.error('Error updating conversation thumbnail', error);
+    }
   };
   
   useEffect(() => {
@@ -455,8 +486,6 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     loading,
     currentImage,
     currentImageInfo,
-    isImageProcessing,
-    imageProcessingProgress,
     createConversation,
     selectConversation,
     deleteConversation,
@@ -464,11 +493,11 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     addAIResponse,
     addMessage,
     updateCurrentImage,
-    updateImageProcessing,
     favoriteImage,
     unfavoriteImage,
     isImageFavorited,
     loadConversations,
+    updateConversationThumbnail,
   };
 
   return <ConversationsContext.Provider value={value}>{children}</ConversationsContext.Provider>;

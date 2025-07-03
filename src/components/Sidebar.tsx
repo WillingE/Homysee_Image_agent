@@ -3,17 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { 
   Plus,
   MessageCircle,
@@ -48,9 +37,10 @@ const Sidebar = ({ className }: SidebarProps) => {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    return `${days}天前`;
+    if (minutes < 1) return `just now`;
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
   };
 
   const handleDeleteConversation = async (conversationId: string) => {
@@ -66,7 +56,7 @@ const Sidebar = ({ className }: SidebarProps) => {
           className="w-full bg-gradient-to-r from-ai-primary to-ai-secondary hover:from-ai-primary-dark hover:to-ai-secondary/80"
         >
           <Plus className="w-4 h-4 mr-2" />
-          新建对话
+          New Chat
         </Button>
       </div>
 
@@ -75,29 +65,36 @@ const Sidebar = ({ className }: SidebarProps) => {
         <div className="p-2 space-y-2">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">
-              加载中...
+              Loading...
             </div>
           ) : conversations.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              暂无对话
+              No conversations
             </div>
           ) : (
             conversations.map((conversation) => (
               <div
                 key={conversation.id}
+                onClick={() => selectConversation(conversation)}
                 className={cn(
-                  'group relative p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md',
+                  'group relative p-3 rounded-lg border cursor-pointer transition-all duration-200 flex items-center gap-3',
                   currentConversation?.id === conversation.id
                     ? 'bg-ai-primary/10 border-ai-primary/30 shadow-sm' 
                     : 'bg-agent-message border-message-border hover:border-ai-primary/20 hover:bg-ai-primary/5'
                 )}
               >
-                <div 
-                  onClick={() => selectConversation(conversation)}
-                  className="flex-1"
-                >
-                  {/* Conversation Header */}
-                  <div className="flex items-start justify-between mb-2">
+                {/* Thumbnail */}
+                {conversation.thumbnail_url ? (
+                  <img src={conversation.thumbnail_url} alt={conversation.title} className="w-10 h-10 rounded-md object-cover flex-shrink-0 bg-agent-message" />
+                ) : (
+                  <div className="w-10 h-10 rounded-md bg-agent-message flex items-center justify-center flex-shrink-0">
+                    <MessageCircle className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                )}
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-1">
                     <div className="flex-1 min-w-0 pr-2">
                       <h4 className={cn(
                         'text-sm font-medium truncate',
@@ -107,11 +104,9 @@ const Sidebar = ({ className }: SidebarProps) => {
                       </h4>
                     </div>
                     {currentConversation?.id === conversation.id && (
-                      <Sparkles className="w-3 h-3 text-ai-primary animate-pulse" />
+                      <Sparkles className="w-3 h-3 text-ai-primary animate-pulse flex-shrink-0" />
                     )}
                   </div>
-
-                  {/* Metadata */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="w-3 h-3" />
@@ -121,36 +116,19 @@ const Sidebar = ({ className }: SidebarProps) => {
                 </div>
 
                 {/* Delete Button */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 hover:bg-destructive/20 hover:text-destructive"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>确认删除对话</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          确定要删除对话 "{conversation.title}" 吗？此操作无法撤销，对话中的所有消息也将被删除。
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>取消</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDeleteConversation(conversation.id)}
-                          className="bg-destructive hover:bg-destructive/90"
-                        >
-                          删除
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                <div className="absolute top-1/2 -translate-y-1/2 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 hover:bg-destructive/20 hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteConversation(conversation.id);
+                    }}
+                    title="Delete conversation"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             ))

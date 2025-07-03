@@ -1,0 +1,54 @@
+{
+  "header": {
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Log Out",
+    "user": "User"
+  },
+  "sidebar": {
+    "newChat": "New Chat",
+    "loading": "Loading...",
+    "noConversations": "No conversations",
+    "deleteConversationTitle": "Delete conversation",
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
+  },
+  "chat": {
+    "placeholder": "Describe your image editing needs...",
+    "thinking": "AI is thinking...",
+    "welcome": "Hi! I'm your AI image assistant. I can help with background changes, object removal, and more. Upload an image or describe what you'd like to do!",
+    "startConversation": "Start a new conversation to begin",
+    "changeBg": "Change BG",
+    "removeObject": "Remove Object",
+    "addElement": "Add Element"
+  },
+  "imagePreview": {
+    "title": "Favorite Images",
+    "downloadAll": "Download All",
+    "zipping": "Zipping...",
+    "imageCount_one": "{{count}} image",
+    "imageCount_other": "{{count}} images",
+    "noFavoritesTitle": "No Favorite Images",
+    "noFavoritesDescription": "Click the heart icon on an image in the chat to save it here.",
+    "favoritesFrom": "Favorites from \"{{title}}\"",
+    "favoritesCurrent": "Favorites from current chat",
+    "downloadImage": "Download image",
+    "unfavorite": "Unfavorite"
+  },
+  "toasts": {
+    "zippingImages": "Zipping images...",
+    "zippingPrepare": "Preparing to compress {{count}} images, please wait.",
+    "zippingComplete": "Zipping completed",
+    "zipDownloadStarted": "{{fileName}} has started downloading.",
+    "zipFailed": "Zipping failed",
+    "zipFailedDescription": "Unable to create zip file, please check console for more information.",
+    "conversationDeleted": "Conversation deleted",
+    "conversationDeletedDescription": "The conversation has been successfully deleted.",
+    "imageFavorited": "Image favorited",
+    "imageFavoritedDescription": "The image has been added to your favorites.",
+    "imageUnfavorited": "Image unfavorited",
+    "imageUnfavoritedDescription": "The image has been removed from your favorites."
+  }
+} 
