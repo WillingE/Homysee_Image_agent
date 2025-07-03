@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Sparkles, 
   Settings, 
@@ -22,6 +23,12 @@ interface HeaderProps {
 }
 
 const Header = ({ className }: HeaderProps) => {
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <header className={`bg-chat-surface border-b border-message-border ${className}`}>
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -73,9 +80,9 @@ const Header = ({ className }: HeaderProps) => {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">Guest User</p>
+                  <p className="text-sm font-medium leading-none">用户</p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    demo@example.com
+                    {user?.email || 'demo@example.com'}
                   </p>
                 </div>
               </div>
@@ -89,9 +96,12 @@ const Header = ({ className }: HeaderProps) => {
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-message-border" />
-              <DropdownMenuItem className="cursor-pointer hover:bg-destructive/10 text-destructive">
+              <DropdownMenuItem 
+                onClick={handleSignOut}
+                className="cursor-pointer hover:bg-destructive/10 text-destructive"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+                <span>退出登录</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
