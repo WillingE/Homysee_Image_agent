@@ -176,10 +176,25 @@ serve(async (req) => {
         
         // 如果仍然没有找到有效的图片URL，返回错误
         if (!actualImageUrl || !actualImageUrl.startsWith('http')) {
-          console.error("No valid image URL found in conversation");
+          console.error("❌ No valid image URL found in conversation");
           responseContent += `\n\n抱歉，我没有找到需要处理的图片。请先上传图片，然后再告诉我您想要的编辑效果。`;
         } else {
-          console.log("Using image URL for processing:", actualImageUrl);
+          console.log("✅ Using valid image URL for processing:", actualImageUrl);
+          
+          // 验证图片URL格式
+          try {
+            new URL(actualImageUrl);
+            console.log("✅ Image URL format validation passed");
+          } catch (urlError) {
+            console.error("❌ Invalid image URL format:", actualImageUrl);
+            responseContent += `\n\n抱歉，图片URL格式无效。请重新上传图片后再试。`;
+            // 跳过图片处理
+            actualImageUrl = null;
+          }
+        }
+        
+        // 只有在有有效图片URL时才调用处理服务
+        if (actualImageUrl) {
           
           // 调用图片处理服务
           const imageProcessingResponse = await fetch(`${supabaseUrl}/functions/v1/image-processing`, {
@@ -198,7 +213,7 @@ serve(async (req) => {
 
           if (imageProcessingResponse.ok) {
             const imageResult = await imageProcessingResponse.json();
-            console.log("Image processing result:", imageResult);
+            console.log("✅ Image processing result:", imageResult);
             
             if (imageResult.status === 'completed' && imageResult.processed_image_url) {
               // 🎉 图片处理已完成！直接返回处理后的图片
@@ -218,8 +233,20 @@ serve(async (req) => {
             }
           } else {
             const errorText = await imageProcessingResponse.text();
-            responseContent += `\n\n❌ 图片处理服务暂时不可用：${errorText}`;
-            console.error("❌ Image processing service error:", errorText);
+            console.error("❌ Image processing service error:", imageProcessingResponse.status, errorText);
+            
+            // 解析错误响应
+            let errorMessage = '图片处理服务暂时不可用';
+            try {
+              const errorData = JSON.parse(errorText);
+              if (errorData.error) {
+                errorMessage = errorData.error;
+              }
+            } catch (parseError) {
+              console.error("Error parsing error response:", parseError);
+            }
+            
+            responseContent += `\n\n❌ 图片处理失败：${errorMessage}`;
           }
         }
       }

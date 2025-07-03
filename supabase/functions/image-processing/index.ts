@@ -43,14 +43,15 @@ serve(async (req) => {
 
     // 验证和清理图片URL
     let cleanImageUrl = original_image_url.trim();
-    console.log("Original image URL:", original_image_url);
+    console.log("✅ Received image URL:", original_image_url);
     
     // 确保URL是有效的HTTP/HTTPS链接
     if (!cleanImageUrl.startsWith('http://') && !cleanImageUrl.startsWith('https://')) {
-      console.log("Invalid URL protocol, returning 400");
+      console.log("❌ Invalid URL protocol, returning 400");
       return new Response(
         JSON.stringify({ 
-          error: "Invalid image URL: must be a valid HTTP/HTTPS URL" 
+          error: "Invalid image URL: must be a valid HTTP/HTTPS URL",
+          received_url: original_image_url
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
@@ -58,21 +59,28 @@ serve(async (req) => {
       );
     }
 
-    // 验证URL格式
+    // 验证URL格式并清理
     try {
       const urlObj = new URL(cleanImageUrl);
       cleanImageUrl = urlObj.href;
-      console.log("Using image URL:", cleanImageUrl);
+      console.log("✅ URL validation passed, using:", cleanImageUrl);
     } catch (urlError) {
-      console.error("Invalid URL format:", urlError);
+      console.error("❌ Invalid URL format:", urlError);
       return new Response(
         JSON.stringify({ 
-          error: `Invalid image URL format: ${urlError.message}` 
+          error: `Invalid image URL format: ${urlError.message}`,
+          received_url: original_image_url
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
         }
       );
+    }
+
+    // 额外验证：检查URL是否可能是有效的图片链接
+    if (!cleanImageUrl.includes('supabase') && !cleanImageUrl.includes('amazonaws') && 
+        !cleanImageUrl.includes('cloudflare') && !cleanImageUrl.includes('googleapis')) {
+      console.log("⚠️ Warning: URL doesn't appear to be from a known image hosting service");
     }
 
     // 创建图片任务记录
