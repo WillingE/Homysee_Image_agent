@@ -10,6 +10,7 @@ export const useImageUpload = () => {
 
   const uploadImage = async (file: File): Promise<string | null> => {
     if (!user) {
+      console.error('Upload failed: User not authenticated');
       toast({
         title: '上传失败',
         description: '请先登录',
@@ -18,28 +19,53 @@ export const useImageUpload = () => {
       return null;
     }
 
+    console.log('Starting image upload for file:', file.name, 'Size:', file.size, 'Type:', file.type);
     setUploading(true);
     
     try {
+      // 验证文件类型和大小
+      if (!file.type.startsWith('image/')) {
+        throw new Error('只能上传图片文件');
+      }
+      
+      if (file.size > 10 * 1024 * 1024) { // 10MB
+        throw new Error('图片文件不能超过10MB');
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
       
-      const { error: uploadError } = await supabase.storage
+      console.log('Uploading to storage with fileName:', fileName);
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('images')
         .upload(fileName, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
 
-      const { data } = supabase.storage
+      console.log('Upload successful, data:', uploadData);
+
+      const { data: urlData } = supabase.storage
         .from('images')
         .getPublicUrl(fileName);
 
-      return data.publicUrl;
+      console.log('Generated public URL:', urlData.publicUrl);
+
+      // 验证URL是否有效
+      if (!urlData.publicUrl) {
+        throw new Error('无法生成图片URL');
+      }
+
+      return urlData.publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
       toast({
         title: '图片上传失败',
-        description: '请检查文件格式和大小',
+        description: errorMessage,
         variant: 'destructive'
       });
       return null;

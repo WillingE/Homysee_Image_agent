@@ -162,22 +162,45 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
+
+    console.log('Image upload started for file:', file.name);
 
     let conversation = currentConversation;
     if (!conversation) {
+      console.log('Creating new conversation for image upload');
       conversation = await createConversation('图片编辑');
-      if (!conversation) return;
+      if (!conversation) {
+        console.error('Failed to create conversation');
+        return;
+      }
     }
 
     try {
       setIsLoading(true);
       
       // 上传图片到 Supabase Storage
+      console.log('Uploading image to storage...');
       const imageUrl = await uploadImage(file);
       
+      if (!imageUrl) {
+        throw new Error('图片上传失败，未获得有效URL');
+      }
+
+      console.log('Image uploaded successfully, URL:', imageUrl);
+      
       // 发送带图片的消息
-      await sendMessage('我上传了一张图片，请帮我分析一下', imageUrl);
+      console.log('Sending message with image...');
+      const userMessage = await sendMessage('我上传了一张图片，请帮我分析一下', imageUrl);
+      
+      if (!userMessage) {
+        throw new Error('消息发送失败');
+      }
+
+      console.log('Message sent successfully, calling AI agent...');
       
       // 调用AI分析图片
       const response = await supabase.functions.invoke('ai-chat-agent', {
@@ -188,12 +211,15 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
         }
       });
 
+      console.log('AI agent response:', response);
+
       if (response.error) {
+        console.error('AI agent error:', response.error);
         throw new Error(response.error.message || 'AI service error');
       }
 
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('Error in handleImageUpload:', error);
       toast({
         title: '上传失败',
         description: error instanceof Error ? error.message : '图片上传时出错',
