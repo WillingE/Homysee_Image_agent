@@ -16,6 +16,15 @@ serve(async (req) => {
   }
 
   try {
+    // Check for authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     const replicateApiKey = Deno.env.get('REPLICATE_API_TOKEN');
     if (!replicateApiKey) {
       throw new Error('Replicate API key not configured');
@@ -29,11 +38,23 @@ serve(async (req) => {
     console.log("=== NEW IMAGE PROCESSING REQUEST ===");
     console.log("Request body:", { original_image_url, prompt, conversation_id, user_id });
 
-    if (!original_image_url || !prompt) {
+    if (!original_image_url || !prompt || !user_id) {
       console.log("Missing required fields, returning 400");
       return new Response(
         JSON.stringify({ 
-          error: "Missing required fields: original_image_url and prompt are required" 
+          error: "Missing required fields: original_image_url, prompt, and user_id are required" 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
+    // Validate prompt length
+    if (prompt.length > 500) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Prompt too long (max 500 characters)" 
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
@@ -77,10 +98,22 @@ serve(async (req) => {
       );
     }
 
-    // 额外验证：检查URL是否可能是有效的图片链接
-    if (!cleanImageUrl.includes('supabase') && !cleanImageUrl.includes('amazonaws') && 
-        !cleanImageUrl.includes('cloudflare') && !cleanImageUrl.includes('googleapis')) {
-      console.log("⚠️ Warning: URL doesn't appear to be from a known image hosting service");
+    // 额外验证：检查URL是否来自允许的域名
+    const allowedDomains = ['supabase.co', 'amazonaws.com', 'cloudflare.com', 'googleapis.com', 'googleusercontent.com'];
+    const urlObj = new URL(cleanImageUrl);
+    const isAllowedDomain = allowedDomains.some(domain => urlObj.hostname.includes(domain));
+    
+    if (!isAllowedDomain) {
+      console.log("❌ Image URL from unauthorized domain:", urlObj.hostname);
+      return new Response(
+        JSON.stringify({ 
+          error: `Image URL must be from an authorized domain. Current domain: ${urlObj.hostname}`,
+          received_url: original_image_url
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
     }
 
     // 创建图片任务记录

@@ -1,7 +1,7 @@
 project_id = "smwhphndqtmzgyjtlisb"
 
 [functions.ai-chat-agent]
-verify_jwt = false
+verify_jwt = true
 
 [functions.image-processing]
-verify_jwt = false
+verify_jwt = true
