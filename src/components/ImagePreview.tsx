@@ -166,7 +166,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 rounded-full shadow-md backdrop-blur-sm bg-red-500/20 hover:bg-red-500/30 text-red-500"
-                      onClick={() => unfavoriteImage(image.message_id)}
+                      onClick={() => unfavoriteImage(image.image_url)}
                       title="Unfavorite"
                     >
                       <Heart className="w-4 h-4 fill-current" />

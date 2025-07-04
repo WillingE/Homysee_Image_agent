@@ -33,7 +33,7 @@ interface ConversationsContextType {
   favoriteImages: FavoriteImage[];
   loading: boolean;
   currentImage: string | null;
-  currentImageInfo: any; // Using 'any' for simplicity, can be typed further
+  currentImageInfo: any;
   createConversation: (title?: string) => Promise<Conversation | null>;
   selectConversation: (conversation: Conversation) => Promise<void>;
   deleteConversation: (conversationId: string) => Promise<boolean>;
@@ -41,9 +41,9 @@ interface ConversationsContextType {
   addAIResponse: (content: string, imageUrl?: string) => Promise<ChatMessage | null>;
   addMessage: (message: ChatMessage) => void;
   updateCurrentImage: (imageUrl: string | null, messageId?: string) => void;
-  favoriteImage: (message: ChatMessage) => Promise<boolean>;
-  unfavoriteImage: (messageId: string) => Promise<boolean>;
-  isImageFavorited: (messageId: string) => boolean;
+  favoriteImage: (message: ChatMessage, imageUrl: string) => Promise<boolean>;
+  unfavoriteImage: (imageUrl: string) => Promise<boolean>;
+  isImageFavorited: (imageUrl: string) => boolean;
   loadConversations: () => Promise<void>;
   updateConversationThumbnail: (conversationId: string, thumbnailUrl: string) => Promise<void>;
 }
@@ -116,9 +116,13 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     }
   };
 
-  // 收藏图片
-  const favoriteImage = async (message: ChatMessage) => {
-    if (!user || !currentConversation || !message.image_url) return false;
+  // 收藏图片 - 修改为基于具体图片URL
+  const favoriteImage = async (message: ChatMessage, imageUrl: string) => {
+    if (!user || !currentConversation || !imageUrl) return false;
+
+    console.log('🔴 Attempting to favorite image:', imageUrl);
+    console.log('🔴 Current favorites count:', favoriteImages.length);
+    console.log('🔴 Current favorites list:', favoriteImages.map(f => f.image_url));
 
     try {
       const { data, error } = await supabase
@@ -127,12 +131,13 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
           user_id: user.id,
           conversation_id: currentConversation.id,
           message_id: message.id,
-          image_url: message.image_url
+          image_url: imageUrl
         })
         .select()
         .single();
 
       if (error) {
+        console.log('🔴 Database error:', error);
         if (error.code === '23505') {
           toast({
             title: 'Already favorited',
@@ -152,14 +157,22 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
         throw error;
       }
 
-      setFavoriteImages(prev => [data as unknown as FavoriteImage, ...prev]);
+      console.log('🟢 Database insert successful:', data);
+      const newFavorite = data as unknown as FavoriteImage;
+      
+      setFavoriteImages(prev => {
+        const newList = [newFavorite, ...prev];
+        console.log('🟢 Updated favorites list:', newList.map(f => f.image_url));
+        return newList;
+      });
+      
       toast({
         title: 'Image favorited',
         description: 'The image has been added to your favorites.',
       });
       return true;
     } catch (error) {
-      console.error('Error favoriting image:', error);
+      console.error('🔴 Error favoriting image:', error);
       toast({
         title: 'Failed to favorite',
         description: 'Please check your connection or contact an admin.',
@@ -169,26 +182,26 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     }
   };
 
-  // 取消收藏图片
-  const unfavoriteImage = async (messageId: string) => {
-    if (!user) return false;
+  // 取消收藏图片 - 修改为基于具体图片URL
+  const unfavoriteImage = async (imageUrl: string) => {
+    if (!user || !imageUrl) return false;
 
     try {
       const { error } = await supabase
         .from('favorite_images' as any)
         .delete()
         .eq('user_id', user.id)
-        .eq('message_id', messageId);
+        .eq('image_url', imageUrl);
 
       if (error) throw error;
 
-      setFavoriteImages(prev => prev.filter(fav => fav.message_id !== messageId));
+      setFavoriteImages(prev => prev.filter(fav => fav.image_url !== imageUrl));
       toast({
         title: 'Image unfavorited',
         description: 'The image has been removed from your favorites.',
       });
       return true;
-    } catch (error)      {
+    } catch (error) {
       console.error('Error unfavoriting image:', error);
       toast({
         title: 'Failed to unfavorite',
@@ -199,9 +212,11 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     }
   };
 
-  // 检查图片是否已收藏
-  const isImageFavorited = (messageId: string) => {
-    return favoriteImages.some(fav => fav.message_id === messageId);
+  // 检查图片是否已收藏 - 修改为基于具体图片URL
+  const isImageFavorited = (imageUrl: string) => {
+    const result = favoriteImages.some(fav => fav.image_url === imageUrl);
+    console.log(`🔍 Checking favorited status for: ${imageUrl} = ${result}`);
+    return result;
   };
 
   // 加载对话消息

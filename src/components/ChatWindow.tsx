@@ -80,11 +80,11 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     }
   }, [messages]);
 
-  const handleFavoriteClick = async (message: any) => {
-    if (isImageFavorited(message.id)) {
-      await unfavoriteImage(message.id);
+  const handleFavoriteClick = async (message: any, imageUrl: string) => {
+    if (isImageFavorited(imageUrl)) {
+      await unfavoriteImage(imageUrl);
     } else {
-      await favoriteImage(message);
+      await favoriteImage(message, imageUrl);
     }
   };
 
@@ -287,17 +287,17 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                               size="sm"
                               className={cn(
                                 "h-7 w-7 p-0 rounded-full shadow-md backdrop-blur-sm",
-                                isImageFavorited(message.id) 
+                                isImageFavorited(url) 
                                   ? "bg-red-500/20 hover:bg-red-500/30 text-red-500" 
-                                  : "bg-white/20 hover:bg-white/30 text-white"
+                                  : "bg-white/20 hover:bg-white/30 text-white border border-white/50"
                               )}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleFavoriteClick(message);
+                                handleFavoriteClick(message, url);
                               }}
-                              title={isImageFavorited(message.id) ? "Unfavorite" : "Favorite"}
+                              title={isImageFavorited(url) ? "Unfavorite" : "Favorite"}
                             >
-                              {isImageFavorited(message.id) ? (
+                              {isImageFavorited(url) ? (
                                 <Heart className="w-4 h-4 fill-current" />
                               ) : (
                                 <Heart className="w-4 h-4" />
