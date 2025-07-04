@@ -175,17 +175,17 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
     
-    setStagedFiles(prev => [...prev, ...Array.from(files)]);
+    setStagedFiles([files[0]]);
     
     if (event.target) {
       event.target.value = '';
     }
   };
 
-  const handleRemoveStagedImage = (indexToRemove: number) => {
-    setStagedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+  const handleRemoveStagedImage = () => {
+    setStagedFiles([]);
   };
 
   const handleImageClick = (imageUrl: string, messageId: string) => {
@@ -352,7 +352,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
           <div className="mb-2 p-2 border-b border-message-border">
               <div className="flex gap-2 pb-2">
                 {stagedFiles.map((file, index) => (
-                  <StagedImagePreview key={index} file={file} onRemove={() => handleRemoveStagedImage(index)} />
+                  <StagedImagePreview key={index} file={file} onRemove={handleRemoveStagedImage} />
                 ))}
               </div>
           </div>
@@ -364,7 +364,6 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
             onChange={handleImageUpload}
             accept="image/*"
             className="hidden"
-            multiple
           />
           <Button
             variant="outline"

@@ -99,9 +99,9 @@ serve(async (req) => {
     }
 
     // 额外验证：检查URL是否来自允许的域名
-    const allowedDomains = ['supabase.co', 'amazonaws.com', 'cloudflare.com', 'googleapis.com', 'googleusercontent.com'];
+    const allowedDomains = ['supabase.co', 'amazonaws.com', 'cloudflare.com', 'googleapis.com', 'googleusercontent.com', 'replicate.delivery'];
     const urlObj = new URL(cleanImageUrl);
-    const isAllowedDomain = allowedDomains.some(domain => urlObj.hostname.includes(domain));
+    const isAllowedDomain = allowedDomains.some(domain => urlObj.hostname.endsWith(domain) || urlObj.hostname === domain);
     
     if (!isAllowedDomain) {
       console.log("❌ Image URL from unauthorized domain:", urlObj.hostname);
