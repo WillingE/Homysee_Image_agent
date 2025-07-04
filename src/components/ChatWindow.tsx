@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Send, Image, Upload, Sparkles, Heart, HeartHandshake, X, Loader2 } from 'lucide-react';
+import { Send, Image, Upload, Sparkles, Heart, HeartHandshake, X, Loader2, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import aiAvatar from '@/assets/ai-avatar.jpg';
 import { useConversations, ChatMessage } from '@/hooks/useConversations';
@@ -13,6 +13,7 @@ import { useImageUpload } from '@/hooks/useImageUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import ImageModal from '@/components/ui/image-modal';
+import ImageEditor from '@/components/ImageEditor';
 
 interface StagedImagePreviewProps {
   file: File;
@@ -71,6 +72,9 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
   const [isSending, setIsSending] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentModalImage, setCurrentModalImage] = useState<string>('');
+  const [isImageEditorOpen, setIsImageEditorOpen] = useState(false);
+  const [currentEditImage, setCurrentEditImage] = useState<string>('');
+  const [currentEditPrompt, setCurrentEditPrompt] = useState<string>('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -197,6 +201,51 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     updateCurrentImage(imageUrl, messageId);
   };
 
+  const handleImageEdit = (imageUrl: string, messageContent: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentEditImage(imageUrl);
+    setCurrentEditPrompt(messageContent);
+    setIsImageEditorOpen(true);
+  };
+
+  const handleApplyImageEdit = async (transform: any, editedPrompt: string) => {
+    if (!currentConversation) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await supabase.functions.invoke('image-processing', {
+        body: {
+          original_image_url: currentEditImage,
+          prompt: editedPrompt,
+          conversation_id: currentConversation.id,
+          user_id: currentConversation.user_id,
+          transform_params: transform
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Image processing failed');
+      }
+
+      // Add the processed image as a new message
+      if (response.data.processed_image_url) {
+        await addAIResponse(
+          `I've adjusted the product position and size as requested.`,
+          response.data.processed_image_url
+        );
+      }
+    } catch (error) {
+      console.error('Error processing image edit:', error);
+      toast({
+        title: 'Failed to process image',
+        description: error instanceof Error ? error.message : 'An error occurred during image processing.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const closeImageModal = () => {
     setIsImageModalOpen(false);
     setCurrentModalImage('');
@@ -273,38 +322,47 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                   {allImageUrls.length > 0 && (
                     <div className="mb-2 relative group grid gap-2" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(120px, 1fr))` }}>
                       {allImageUrls.map((url, index) => (
-                        <div key={index} className="aspect-square bg-agent-message rounded-lg border border-message-border overflow-hidden relative group/image">
-                          <img 
-                            src={url} 
-                            alt={`Uploaded ${index + 1}`}
-                            className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => handleImageClick(url, message.id)}
-                            title="Click to view large image"
-                          />
-                           <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={cn(
-                                "h-7 w-7 p-0 rounded-full shadow-md backdrop-blur-sm",
-                                isImageFavorited(url) 
-                                  ? "bg-red-500/20 hover:bg-red-500/30 text-red-500" 
-                                  : "bg-white/20 hover:bg-white/30 text-white border border-white/50"
-                              )}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFavoriteClick(message, url);
-                              }}
-                              title={isImageFavorited(url) ? "Unfavorite" : "Favorite"}
-                            >
-                              {isImageFavorited(url) ? (
-                                <Heart className="w-4 h-4 fill-current" />
-                              ) : (
-                                <Heart className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </div>
+                         <div key={index} className="aspect-square bg-agent-message rounded-lg border border-message-border overflow-hidden relative group/image">
+                           <img 
+                             src={url} 
+                             alt={`Uploaded ${index + 1}`}
+                             className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                             onClick={() => handleImageClick(url, message.id)}
+                             title="Click to view large image"
+                           />
+                            <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity flex gap-1">
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               className="h-7 w-7 p-0 rounded-full shadow-md backdrop-blur-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-500 border border-blue-500/50"
+                               onClick={(e) => handleImageEdit(url, message.content, e)}
+                               title="Edit position and size"
+                             >
+                               <Edit className="w-3 h-3" />
+                             </Button>
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               className={cn(
+                                 "h-7 w-7 p-0 rounded-full shadow-md backdrop-blur-sm",
+                                 isImageFavorited(url) 
+                                   ? "bg-red-500/20 hover:bg-red-500/30 text-red-500" 
+                                   : "bg-white/20 hover:bg-white/30 text-white border border-white/50"
+                               )}
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 handleFavoriteClick(message, url);
+                               }}
+                               title={isImageFavorited(url) ? "Unfavorite" : "Favorite"}
+                             >
+                               {isImageFavorited(url) ? (
+                                 <Heart className="w-4 h-4 fill-current" />
+                               ) : (
+                                 <Heart className="w-4 h-4" />
+                               )}
+                             </Button>
+                           </div>
+                         </div>
                       ))}
                     </div>
                   )}
@@ -438,6 +496,15 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
         onClose={closeImageModal}
         imageUrl={currentModalImage}
         alt="Large image view"
+      />
+
+      {/* Image Editor */}
+      <ImageEditor
+        isOpen={isImageEditorOpen}
+        onClose={() => setIsImageEditorOpen(false)}
+        imageUrl={currentEditImage}
+        onApply={handleApplyImageEdit}
+        originalPrompt={currentEditPrompt}
       />
     </Card>
   );

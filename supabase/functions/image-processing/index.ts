@@ -33,10 +33,10 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const body = await req.json();
 
-    const { original_image_url, prompt, conversation_id, user_id } = body;
+    const { original_image_url, prompt, conversation_id, user_id, transform_params } = body;
 
     console.log("=== NEW IMAGE PROCESSING REQUEST ===");
-    console.log("Request body:", { original_image_url, prompt, conversation_id, user_id });
+    console.log("Request body:", { original_image_url, prompt, conversation_id, user_id, transform_params });
 
     if (!original_image_url || !prompt || !user_id) {
       console.log("Missing required fields, returning 400");
