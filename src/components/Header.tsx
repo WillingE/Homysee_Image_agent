@@ -79,7 +79,7 @@ const Header = ({ className }: HeaderProps) => {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">用户</p>
+                  <p className="text-sm font-medium leading-none">User</p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {user?.email || 'demo@example.com'}
                   </p>
@@ -100,7 +100,7 @@ const Header = ({ className }: HeaderProps) => {
                 className="cursor-pointer hover:bg-destructive/10 text-destructive"
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>退出登录</span>
+                <span>Sign Out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

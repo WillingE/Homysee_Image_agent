@@ -37,14 +37,14 @@ const Auth = () => {
     if (error) {
       setError(error.message);
       toast({
-        title: '登录失败',
+        title: 'Login Failed',
         description: error.message,
         variant: 'destructive'
       });
     } else {
       toast({
-        title: '登录成功',
-        description: '欢迎回来！'
+        title: 'Login Successful',
+        description: 'Welcome back!'
       });
     }
     
@@ -61,14 +61,14 @@ const Auth = () => {
     if (error) {
       setError(error.message);
       toast({
-        title: '注册失败',
+        title: 'Registration Failed',
         description: error.message,
         variant: 'destructive'
       });
     } else {
       toast({
-        title: '注册成功',
-        description: '请检查邮箱确认账户'
+        title: 'Registration Successful',
+        description: 'Please check your email to confirm your account'
       });
     }
     
@@ -84,19 +84,19 @@ const Auth = () => {
               <Sparkles className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">AI智能修图助手</h1>
-          <p className="text-muted-foreground">开始您的AI图像编辑之旅</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">AI Image Editor Assistant</h1>
+          <p className="text-muted-foreground">Start your AI image editing journey</p>
         </div>
 
         <Card className="bg-chat-surface border-message-border">
           <CardHeader>
-            <CardTitle className="text-center text-foreground">账户登录</CardTitle>
+            <CardTitle className="text-center text-foreground">Account Login</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">登录</TabsTrigger>
-                <TabsTrigger value="signup">注册</TabsTrigger>
+                <TabsTrigger value="signin">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
               </TabsList>
               
               <TabsContent value="signin">
@@ -104,14 +104,14 @@ const Auth = () => {
                   <div className="space-y-2">
                     <Label htmlFor="signin-email" className="flex items-center gap-2">
                       <Mail className="w-4 h-4" />
-                      邮箱
+                      Email
                     </Label>
                     <Input
                       id="signin-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="请输入邮箱"
+                      placeholder="Please enter your email"
                       required
                       className="bg-input border-message-border"
                     />
@@ -120,14 +120,14 @@ const Auth = () => {
                   <div className="space-y-2">
                     <Label htmlFor="signin-password" className="flex items-center gap-2">
                       <Lock className="w-4 h-4" />
-                      密码
+                      Password
                     </Label>
                     <Input
                       id="signin-password"
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="请输入密码"
+                      placeholder="Please enter your password"
                       required
                       className="bg-input border-message-border"
                     />
@@ -144,7 +144,7 @@ const Auth = () => {
                     className="w-full bg-gradient-to-r from-ai-primary to-ai-secondary hover:from-ai-primary-dark hover:to-ai-secondary/80"
                     disabled={loading}
                   >
-                    {loading ? '登录中...' : '登录'}
+                    {loading ? 'Signing in...' : 'Sign In'}
                   </Button>
                 </form>
               </TabsContent>
@@ -154,14 +154,14 @@ const Auth = () => {
                   <div className="space-y-2">
                     <Label htmlFor="signup-username" className="flex items-center gap-2">
                       <User className="w-4 h-4" />
-                      用户名
+                      Username
                     </Label>
                     <Input
                       id="signup-username"
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="请输入用户名"
+                      placeholder="Please enter your username"
                       className="bg-input border-message-border"
                     />
                   </div>
@@ -169,14 +169,14 @@ const Auth = () => {
                   <div className="space-y-2">
                     <Label htmlFor="signup-email" className="flex items-center gap-2">
                       <Mail className="w-4 h-4" />
-                      邮箱
+                      Email
                     </Label>
                     <Input
                       id="signup-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="请输入邮箱"
+                      placeholder="Please enter your email"
                       required
                       className="bg-input border-message-border"
                     />
@@ -185,14 +185,14 @@ const Auth = () => {
                   <div className="space-y-2">
                     <Label htmlFor="signup-password" className="flex items-center gap-2">
                       <Lock className="w-4 h-4" />
-                      密码
+                      Password
                     </Label>
                     <Input
                       id="signup-password"
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="请输入密码（至少6位）"
+                      placeholder="Please enter password (at least 6 characters)"
                       required
                       className="bg-input border-message-border"
                     />
@@ -209,7 +209,7 @@ const Auth = () => {
                     className="w-full bg-gradient-to-r from-ai-primary to-ai-secondary hover:from-ai-primary-dark hover:to-ai-secondary/80"
                     disabled={loading}
                   >
-                    {loading ? '注册中...' : '注册'}
+                    {loading ? 'Signing up...' : 'Sign Up'}
                   </Button>
                 </form>
               </TabsContent>
@@ -218,7 +218,7 @@ const Auth = () => {
         </Card>
 
         <div className="text-center mt-6 text-sm text-muted-foreground">
-          <p>登录即表示您同意我们的服务条款和隐私政策</p>
+          <p>By signing in, you agree to our terms of service and privacy policy</p>
         </div>
       </div>
     </div>

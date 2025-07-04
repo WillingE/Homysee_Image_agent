@@ -12,6 +12,7 @@ import { useConversations, ChatMessage } from '@/hooks/useConversations';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import ImageModal from '@/components/ui/image-modal';
 
 interface StagedImagePreviewProps {
   file: File;
@@ -68,6 +69,8 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [currentModalImage, setCurrentModalImage] = useState<string>('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -185,6 +188,20 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     setStagedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
+  const handleImageClick = (imageUrl: string, messageId: string) => {
+    // Open modal for large view
+    setCurrentModalImage(imageUrl);
+    setIsImageModalOpen(true);
+    
+    // Also update the right preview area
+    updateCurrentImage(imageUrl, messageId);
+  };
+
+  const closeImageModal = () => {
+    setIsImageModalOpen(false);
+    setCurrentModalImage('');
+  };
+
   return (
     <Card className={cn('flex flex-col h-full bg-chat-surface border-message-border', className)}>
       {/* Chat Header */}
@@ -261,8 +278,8 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                             src={url} 
                             alt={`Uploaded ${index + 1}`}
                             className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => updateCurrentImage(url, message.id)}
-                            title="Click to view in the right preview area"
+                            onClick={() => handleImageClick(url, message.id)}
+                            title="Click to view large image"
                           />
                            <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity">
                             <Button
@@ -415,6 +432,14 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
           </Button>
         </div>
       </div>
+
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={closeImageModal}
+        imageUrl={currentModalImage}
+        alt="Large image view"
+      />
     </Card>
   );
 };

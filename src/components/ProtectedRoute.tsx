@@ -17,7 +17,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         <Card className="bg-chat-surface border-message-border p-8">
           <div className="flex items-center justify-center space-x-3">
             <Loader2 className="w-6 h-6 animate-spin text-ai-primary" />
-            <span className="text-foreground">加载中...</span>
+            <span className="text-foreground">Loading...</span>
           </div>
         </Card>
       </div>

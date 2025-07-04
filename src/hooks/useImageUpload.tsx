@@ -12,8 +12,8 @@ export const useImageUpload = () => {
     if (!user) {
       console.error('Upload failed: User not authenticated');
       toast({
-        title: '上传失败',
-        description: '请先登录',
+        title: 'Upload Failed',
+        description: 'Please login first',
         variant: 'destructive'
       });
       return null;
@@ -25,11 +25,11 @@ export const useImageUpload = () => {
     try {
       // 验证文件类型和大小
       if (!file.type.startsWith('image/')) {
-        throw new Error('只能上传图片文件');
+        throw new Error('Only image files can be uploaded');
       }
       
       if (file.size > 10 * 1024 * 1024) { // 10MB
-        throw new Error('图片文件不能超过10MB');
+        throw new Error('Image files cannot exceed 10MB');
       }
 
       const fileExt = file.name.split('.').pop();
@@ -56,15 +56,15 @@ export const useImageUpload = () => {
 
       // 验证URL是否有效
       if (!urlData.publicUrl) {
-        throw new Error('无法生成图片URL');
+        throw new Error('Failed to generate image URL');
       }
 
       return urlData.publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast({
-        title: '图片上传失败',
+        title: 'Image Upload Failed',
         description: errorMessage,
         variant: 'destructive'
       });

@@ -252,7 +252,7 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
   };
   
   // 创建新对话
-  const createConversation = async (title: string = '新对话') => {
+  const createConversation = async (title: string = 'New Chat') => {
     if (!user) return null;
 
     try {
