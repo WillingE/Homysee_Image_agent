@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ConversationsProvider } from './hooks/useConversations';
 import ProtectedRoute from "@/components/ProtectedRoute";
+import Homepage from "./pages/Homepage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -21,8 +22,9 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              <Route path="/" element={<Homepage />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={
+              <Route path="/app" element={
                 <ProtectedRoute>
                   <Index />
                 </ProtectedRoute>

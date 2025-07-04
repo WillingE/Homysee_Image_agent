@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { FavoriteImage } from '@/integrations/supabase/types';
+import { Tables } from '@/integrations/supabase/types';
+
+type FavoriteImage = Tables<'favorite_images'>;
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 

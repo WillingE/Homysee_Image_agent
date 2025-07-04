@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       chat_messages: {
         Row: {
+          additional_image_urls: string[] | null
           content: string
           conversation_id: string
           created_at: string
@@ -19,6 +20,7 @@ export type Database = {
           role: string
         }
         Insert: {
+          additional_image_urls?: string[] | null
           content: string
           conversation_id: string
           created_at?: string
@@ -27,6 +29,7 @@ export type Database = {
           role: string
         }
         Update: {
+          additional_image_urls?: string[] | null
           content?: string
           conversation_id?: string
           created_at?: string
@@ -48,6 +51,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          thumbnail_url: string | null
           title: string
           updated_at: string
           user_id: string
@@ -55,6 +59,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          thumbnail_url?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -62,11 +67,54 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          thumbnail_url?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      favorite_images: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          image_url: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          image_url: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          image_url?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorite_images_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "favorite_images_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       image_tasks: {
         Row: {
@@ -268,12 +316,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-export interface FavoriteImage {
-  id: string;
-  user_id: string;
-  conversation_id: string;
-  message_id: string;
-  image_url: string;
-  created_at: string;
-}

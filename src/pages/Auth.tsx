@@ -22,9 +22,9 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
-      navigate('/');
-    }
+        if (user) {
+          navigate('/app');
+        }
   }, [user, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
