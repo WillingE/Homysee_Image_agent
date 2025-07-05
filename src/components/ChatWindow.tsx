@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, ElementRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -75,12 +75,15 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
   const [isImageEditorOpen, setIsImageEditorOpen] = useState(false);
   const [currentEditImage, setCurrentEditImage] = useState<string>('');
   const [currentEditPrompt, setCurrentEditPrompt] = useState<string>('');
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<ElementRef<typeof ScrollArea>>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
+    if (viewport) {
+      setTimeout(() => {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+      }, 100);
     }
   }, [messages]);
 
