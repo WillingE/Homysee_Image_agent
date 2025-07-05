@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Plus,
   MessageCircle,
@@ -64,8 +65,16 @@ const Sidebar = ({ className }: SidebarProps) => {
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading...
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center space-x-3 p-3">
+                  <Skeleton className="h-10 w-10 rounded-md" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : conversations.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">

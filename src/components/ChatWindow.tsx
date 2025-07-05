@@ -303,7 +303,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
               <div
                 key={message.id}
                 className={cn(
-                  'flex gap-3 animate-fade-in',
+                  'flex gap-3',
                   message.role === 'user' ? 'justify-end' : 'justify-start'
                 )}
               >
@@ -378,9 +378,22 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                 </div>
 
                 {message.role === 'user' && (
-                  <Avatar className="w-8 h-8 mt-1">
-                    <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">U</AvatarFallback>
-                  </Avatar>
+                  <div className="flex items-end">
+                    {message.status === 'sending' && (
+                      <Loader2 className="w-4 h-4 text-muted-foreground animate-spin mr-2" />
+                    )}
+                    {message.status === 'failed' && (
+                      // Todo: Add a retry mechanism here
+                      <div className="w-4 h-4 text-destructive mr-2" title="Failed to send">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                          <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">U</AvatarFallback>
+                    </Avatar>
+                  </div>
                 )}
               </div>
             )})

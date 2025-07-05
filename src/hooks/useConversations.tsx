@@ -23,6 +23,7 @@ export interface ChatMessage {
   image_url?: string;
   created_at: string;
   additional_image_urls?: string[];
+  status?: 'sending' | 'failed';
 }
 
 // 1. Define the context type
@@ -62,6 +63,12 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
   const [currentImageInfo, setCurrentImageInfo] = useState<any | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const updateMessageInList = (updatedMessage: ChatMessage) => {
+    setMessages(prevMessages => 
+      prevMessages.map(msg => msg.id === updatedMessage.id ? updatedMessage : msg)
+    );
+  };
 
   // 加载用户的所有对话
   const loadConversations = async () => {
@@ -120,13 +127,20 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
   const favoriteImage = async (message: ChatMessage, imageUrl: string) => {
     if (!user || !currentConversation || !imageUrl) return false;
 
-    console.log('🔴 Attempting to favorite image:', imageUrl);
-    console.log('🔴 Current favorites count:', favoriteImages.length);
-    console.log('🔴 Current favorites list:', favoriteImages.map(f => f.image_url));
+    const newFavorite: FavoriteImage = {
+      id: `temp_fav_${Date.now()}`,
+      user_id: user.id,
+      conversation_id: currentConversation.id,
+      message_id: message.id,
+      image_url: imageUrl,
+      created_at: new Date().toISOString(),
+    };
+
+    setFavoriteImages(prev => [newFavorite, ...prev]);
 
     try {
       const { data, error } = await supabase
-        .from('favorite_images' as any)
+        .from('favorite_images')
         .insert({
           user_id: user.id,
           conversation_id: currentConversation.id,
@@ -136,35 +150,9 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
         .select()
         .single();
 
-      if (error) {
-        console.log('🔴 Database error:', error);
-        if (error.code === '23505') {
-          toast({
-            title: 'Already favorited',
-            description: 'This image is already in your favorites.',
-            variant: 'default'
-          });
-          return false;
-        }
-        if (error.code === '42P01' || error.message?.includes('relation "public.favorite_images" does not exist')) {
-          toast({
-            title: 'Feature not enabled',
-            description: 'Favorites require database setup. Please contact an admin.',
-            variant: 'destructive'
-          });
-          return false;
-        }
-        throw error;
-      }
-
-      console.log('🟢 Database insert successful:', data);
-      const newFavorite = data as unknown as FavoriteImage;
+      if (error) throw error;
       
-      setFavoriteImages(prev => {
-        const newList = [newFavorite, ...prev];
-        console.log('🟢 Updated favorites list:', newList.map(f => f.image_url));
-        return newList;
-      });
+      setFavoriteImages(prev => prev.map(fav => fav.id === newFavorite.id ? (data as FavoriteImage) : fav));
       
       toast({
         title: 'Image favorited',
@@ -173,6 +161,9 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
       return true;
     } catch (error) {
       console.error('🔴 Error favoriting image:', error);
+      
+      setFavoriteImages(prev => prev.filter(fav => fav.id !== newFavorite.id));
+
       toast({
         title: 'Failed to favorite',
         description: 'Please check your connection or contact an admin.',
@@ -186,16 +177,21 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
   const unfavoriteImage = async (imageUrl: string) => {
     if (!user || !imageUrl) return false;
 
+    const favoriteToRemove = favoriteImages.find(fav => fav.image_url === imageUrl);
+    if (!favoriteToRemove) return false;
+
+    const originalFavorites = [...favoriteImages];
+    setFavoriteImages(prev => prev.filter(fav => fav.image_url !== imageUrl));
+
     try {
       const { error } = await supabase
-        .from('favorite_images' as any)
+        .from('favorite_images')
         .delete()
         .eq('user_id', user.id)
         .eq('image_url', imageUrl);
 
       if (error) throw error;
 
-      setFavoriteImages(prev => prev.filter(fav => fav.image_url !== imageUrl));
       toast({
         title: 'Image unfavorited',
         description: 'The image has been removed from your favorites.',
@@ -203,6 +199,9 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
       return true;
     } catch (error) {
       console.error('Error unfavoriting image:', error);
+      
+      setFavoriteImages(originalFavorites);
+
       toast({
         title: 'Failed to unfavorite',
         description: 'Could not remove the image from your favorites.',
@@ -344,33 +343,48 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
 
     const [firstImageUrl, ...additionalImageUrls] = imageUrls;
 
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMessage: ChatMessage = {
+      id: tempId,
+      conversation_id: conversation.id,
+      role: 'user',
+      content,
+      image_url: firstImageUrl,
+      additional_image_urls: additionalImageUrls.length > 0 ? additionalImageUrls : [],
+      created_at: new Date().toISOString(),
+      status: 'sending',
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+
     if (firstImageUrl && !conversation.thumbnail_url) {
-      // Manually update the local object before the async call to prevent race conditions
       const updatedConversation = { ...conversation, thumbnail_url: firstImageUrl };
       setCurrentConversation(updatedConversation);
       setConversations(prev => prev.map(c => c.id === conversation.id ? updatedConversation : c));
-      await updateConversationThumbnail(conversation.id, firstImageUrl);
+      updateConversationThumbnail(conversation.id, firstImageUrl);
     }
     
     try {
-      const { data, error } = await supabase
+      const { data: dbMessage, error } = await supabase
         .from('chat_messages')
         .insert({
           conversation_id: conversation.id,
           role: 'user',
           content,
           image_url: firstImageUrl,
-          additional_image_urls: additionalImageUrls.length > 0 ? additionalImageUrls : null,
+          additional_image_urls: additionalImageUrls.length > 0 ? additionalImageUrls : undefined,
         })
         .select()
         .single();
 
       if (error) throw error;
       
-      setMessages(prev => [...prev, data as ChatMessage]);
-      return data as ChatMessage;
+      setMessages(prev => prev.map(msg => msg.id === tempId ? { ...dbMessage, status: undefined } as ChatMessage : msg));
+
+      return dbMessage as ChatMessage;
     } catch (error) {
       console.error('Error sending message:', error);
+      setMessages(prev => prev.map(msg => msg.id === tempId ? { ...optimisticMessage, status: 'failed' } : msg));
       toast({
         title: 'Failed to send message',
         description: error instanceof Error ? error.message : 'The message could not be sent.',

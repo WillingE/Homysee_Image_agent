@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useConversations } from '@/hooks/useConversations';
 import { useToast } from '@/hooks/use-toast';
 import JSZip from 'jszip';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ImagePreviewProps {
   className?: string;
@@ -18,6 +19,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
     currentConversation,
     favoriteImages,
     unfavoriteImage,
+    loading,
   } = useConversations();
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -122,7 +124,16 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
 
       {/* Preview Area */}
       <div className="flex-1 flex flex-col min-h-0">
-        {favoriteImages.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 gap-4 p-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="relative group">
+                <Skeleton className="aspect-square w-full rounded-lg" />
+                <Skeleton className="h-4 w-1/2 mt-2" />
+              </div>
+            ))}
+          </div>
+        ) : favoriteImages.length === 0 ? (
           <div className="p-4 h-full flex flex-col items-center justify-center text-center space-y-4">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-ai-primary/20 to-ai-secondary/20 flex items-center justify-center">
               <Heart className="w-12 h-12 text-ai-primary" />
