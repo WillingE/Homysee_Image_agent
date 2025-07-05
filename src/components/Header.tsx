@@ -34,9 +34,9 @@ const Header = ({ className }: HeaderProps) => {
     <header className={`bg-chat-surface border-b border-message-border ${className}`}>
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo & Brand */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {/* Homywork Logo */}
-          <div className="h-10 px-3 flex items-center justify-center rounded-lg border-2 border-orange-500 bg-black mr-2">
+          <div className="h-12 px-4 flex items-center justify-center rounded-xl bg-gradient-to-r from-ai-primary to-ai-secondary shadow-shadow-elegant border border-ai-primary/20 backdrop-blur-sm">
             <svg width="120" height="28" viewBox="0 0 120 28" fill="none" xmlns="http://www.w3.org/2000/svg">
               {/* Complete "Homywork" text */}
               <text x="60" y="20" textAnchor="middle" fill="#fff" fontSize="16" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="600">
@@ -44,8 +44,9 @@ const Header = ({ className }: HeaderProps) => {
               </text>
             </svg>
           </div>
-          <div>
-            <h1 className="text-lg font-semibold">AI Image Studio</h1>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">AI Image Studio</h1>
+            <div className="h-px w-full bg-gradient-to-r from-ai-primary via-ai-accent to-transparent opacity-60"></div>
           </div>
         </div>
 

@@ -122,7 +122,7 @@ export type Database = {
           created_at: string
           error_message: string | null
           id: string
-          original_image_url: string
+          original_image_url: string | null
           processed_image_url: string | null
           prompt: string
           status: string
@@ -134,7 +134,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
-          original_image_url: string
+          original_image_url?: string | null
           processed_image_url?: string | null
           prompt: string
           status?: string
@@ -146,7 +146,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
-          original_image_url?: string
+          original_image_url?: string | null
           processed_image_url?: string | null
           prompt?: string
           status?: string
