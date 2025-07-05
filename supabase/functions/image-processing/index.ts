@@ -38,11 +38,11 @@ serve(async (req) => {
     console.log("=== NEW IMAGE PROCESSING REQUEST ===");
     console.log("Request body:", { original_image_url, prompt, conversation_id, user_id, transform_params });
 
-    if (!original_image_url || !prompt || !user_id) {
+    if (!prompt || !user_id) {
       console.log("Missing required fields, returning 400");
       return new Response(
         JSON.stringify({ 
-          error: "Missing required fields: original_image_url, prompt, and user_id are required" 
+          error: "Missing required fields: prompt and user_id are required" 
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
@@ -62,58 +62,61 @@ serve(async (req) => {
       );
     }
 
-    // 验证和清理图片URL
-    let cleanImageUrl = original_image_url.trim();
-    console.log("✅ Received image URL:", original_image_url);
-    
-    // 确保URL是有效的HTTP/HTTPS链接
-    if (!cleanImageUrl.startsWith('http://') && !cleanImageUrl.startsWith('https://')) {
-      console.log("❌ Invalid URL protocol, returning 400");
-      return new Response(
-        JSON.stringify({ 
-          error: "Invalid image URL: must be a valid HTTP/HTTPS URL",
-          received_url: original_image_url
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
+    // 验证和清理图片URL（仅在有图片时）
+    let cleanImageUrl: string | null = null;
+    if (original_image_url && typeof original_image_url === 'string' && original_image_url.trim() !== '') {
+      cleanImageUrl = original_image_url.trim();
+      console.log("✅ Received image URL:", original_image_url);
+      // 确保URL是有效的HTTP/HTTPS链接
+      if (typeof cleanImageUrl === 'string' && !cleanImageUrl.startsWith('http://') && !cleanImageUrl.startsWith('https://')) {
+        console.log("❌ Invalid URL protocol, returning 400");
+        return new Response(
+          JSON.stringify({ 
+            error: "Invalid image URL: must be a valid HTTP/HTTPS URL",
+            received_url: original_image_url
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+      // 验证URL格式并清理
+      try {
+        if (typeof cleanImageUrl === 'string') {
+          const urlObj = new URL(cleanImageUrl);
+          cleanImageUrl = urlObj.href;
+          console.log("✅ URL validation passed, using:", cleanImageUrl);
         }
-      );
-    }
-
-    // 验证URL格式并清理
-    try {
-      const urlObj = new URL(cleanImageUrl);
-      cleanImageUrl = urlObj.href;
-      console.log("✅ URL validation passed, using:", cleanImageUrl);
-    } catch (urlError) {
-      console.error("❌ Invalid URL format:", urlError);
-      return new Response(
-        JSON.stringify({ 
-          error: `Invalid image URL format: ${urlError.message}`,
-          received_url: original_image_url
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
+      } catch (urlError) {
+        console.error("❌ Invalid URL format:", urlError);
+        return new Response(
+          JSON.stringify({ 
+            error: `Invalid image URL format: ${urlError.message}`,
+            received_url: original_image_url
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+      // 额外验证：检查URL是否来自允许的域名
+      const allowedDomains = ['supabase.co', 'amazonaws.com', 'cloudflare.com', 'googleapis.com', 'googleusercontent.com', 'replicate.delivery'];
+      if (typeof cleanImageUrl === 'string') {
+        const urlObj = new URL(cleanImageUrl);
+        const isAllowedDomain = allowedDomains.some(domain => urlObj.hostname.endsWith(domain) || urlObj.hostname === domain);
+        if (!isAllowedDomain) {
+          console.log("❌ Image URL from unauthorized domain:", urlObj.hostname);
+          return new Response(
+            JSON.stringify({ 
+              error: `Image URL must be from an authorized domain. Current domain: ${urlObj.hostname}`,
+              received_url: original_image_url
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 400,
+            }
+          );
         }
-      );
-    }
-
-    // 额外验证：检查URL是否来自允许的域名
-    const allowedDomains = ['supabase.co', 'amazonaws.com', 'cloudflare.com', 'googleapis.com', 'googleusercontent.com', 'replicate.delivery'];
-    const urlObj = new URL(cleanImageUrl);
-    const isAllowedDomain = allowedDomains.some(domain => urlObj.hostname.endsWith(domain) || urlObj.hostname === domain);
-    
-    if (!isAllowedDomain) {
-      console.log("❌ Image URL from unauthorized domain:", urlObj.hostname);
-      return new Response(
-        JSON.stringify({ 
-          error: `Image URL must be from an authorized domain. Current domain: ${urlObj.hostname}`,
-          received_url: original_image_url
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        }
-      );
+      }
     }
 
     // 创建图片任务记录
@@ -122,7 +125,7 @@ serve(async (req) => {
       .insert({
         user_id: user_id,
         conversation_id: conversation_id,
-        original_image_url: cleanImageUrl,
+        original_image_url: cleanImageUrl || null,
         prompt: prompt,
         status: 'processing'
       })
@@ -135,6 +138,19 @@ serve(async (req) => {
     
     // 🚀 使用同步的 Replicate API 调用
     try {
+      // 构造input参数，支持无图片时不传input_image
+      const replicateInput: Record<string, any> = {
+        prompt: prompt,
+        guidance_scale: 3.5,
+        num_inference_steps: 28,
+        enable_safety_checker: true,
+        output_format: "jpg",
+        safety_tolerance: 2
+      };
+      if (cleanImageUrl && typeof cleanImageUrl === 'string') {
+        replicateInput.input_image = cleanImageUrl;
+        replicateInput.aspect_ratio = "match_input_image";
+      }
       const response = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions', {
         method: 'POST',
         headers: {
@@ -143,16 +159,7 @@ serve(async (req) => {
           'Prefer': 'wait'  // 🔑 关键：使请求同步等待完成
         },
         body: JSON.stringify({
-          input: {
-            input_image: cleanImageUrl,
-            prompt: prompt,
-            guidance_scale: 3.5,
-            num_inference_steps: 28,
-            enable_safety_checker: true,
-            aspect_ratio: "match_input_image",
-            output_format: "jpg",
-            safety_tolerance: 2
-          }
+          input: replicateInput
         })
       });
 

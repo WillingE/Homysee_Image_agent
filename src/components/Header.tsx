@@ -35,12 +35,17 @@ const Header = ({ className }: HeaderProps) => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo & Brand */}
         <div className="flex items-center gap-3">
-          <Avatar>
-            <AvatarImage src={aiAvatar} alt="AI Assistant" />
-            <AvatarFallback>AI</AvatarFallback>
-          </Avatar>
+          {/* Homywork Logo */}
+          <div className="h-10 px-3 flex items-center justify-center rounded-lg border-2 border-orange-500 bg-black mr-2">
+            <svg width="120" height="28" viewBox="0 0 120 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Complete "Homywork" text */}
+              <text x="60" y="20" textAnchor="middle" fill="#fff" fontSize="16" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="600">
+                Homywork
+              </text>
+            </svg>
+          </div>
           <div>
-            <h1 className="text-lg font-semibold">Lovelace Image Whisperer</h1>
+            <h1 className="text-lg font-semibold">AI Image Studio</h1>
           </div>
         </div>
 
