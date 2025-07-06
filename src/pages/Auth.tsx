@@ -76,11 +76,11 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-chat-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-ai-primary to-ai-secondary flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center">
               <Sparkles className="w-8 h-8 text-white" />
             </div>
           </div>
@@ -88,7 +88,7 @@ const Auth = () => {
           <p className="text-muted-foreground">Start your AI image editing journey</p>
         </div>
 
-        <Card className="bg-chat-surface border-message-border">
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-center text-foreground">Account Login</CardTitle>
           </CardHeader>
@@ -113,7 +113,6 @@ const Auth = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Please enter your email"
                       required
-                      className="bg-input border-message-border"
                     />
                   </div>
                   
@@ -129,7 +128,6 @@ const Auth = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Please enter your password"
                       required
-                      className="bg-input border-message-border"
                     />
                   </div>
 
@@ -141,7 +139,7 @@ const Auth = () => {
 
                   <Button 
                     type="submit" 
-                    className="w-full bg-gradient-to-r from-ai-primary to-ai-secondary hover:from-ai-primary-dark hover:to-ai-secondary/80"
+                    className="w-full"
                     disabled={loading}
                   >
                     {loading ? 'Signing in...' : 'Sign In'}
@@ -162,7 +160,6 @@ const Auth = () => {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="Please enter your username"
-                      className="bg-input border-message-border"
                     />
                   </div>
                   
@@ -178,7 +175,6 @@ const Auth = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Please enter your email"
                       required
-                      className="bg-input border-message-border"
                     />
                   </div>
                   
@@ -194,7 +190,6 @@ const Auth = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Please enter password (at least 6 characters)"
                       required
-                      className="bg-input border-message-border"
                     />
                   </div>
 
@@ -206,7 +201,7 @@ const Auth = () => {
 
                   <Button 
                     type="submit" 
-                    className="w-full bg-gradient-to-r from-ai-primary to-ai-secondary hover:from-ai-primary-dark hover:to-ai-secondary/80"
+                    className="w-full"
                     disabled={loading}
                   >
                     {loading ? 'Signing up...' : 'Sign Up'}

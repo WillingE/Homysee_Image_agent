@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRight, Zap, Palette, RotateCcw, Brain, Sparkles, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import heroImage from '@/assets/hero-banner.jpg';
 
 const Homepage = () => {
   const navigate = useNavigate();
@@ -42,30 +41,23 @@ const Homepage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-chat-background">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-          style={{ backgroundImage: `url(${heroImage})` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-ai-primary/20 to-ai-secondary/20" />
-        
+      <section className="relative h-screen flex items-center justify-center">
         <div className="relative z-10 max-w-4xl mx-auto text-center px-6">
-          <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 animate-fade-in">
+          <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6">
             AI Image Generation
-            <span className="block bg-gradient-to-r from-ai-primary to-ai-secondary bg-clip-text text-transparent">
+            <span className="block text-primary">
               Made Simple
             </span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-fade-in">
+          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Create stunning product images with pure conversation. No complex tools, no waiting - just describe what you want.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
-              variant="ai" 
               size="lg" 
               className="text-lg px-8 py-4"
               onClick={() => navigate('/auth')}
@@ -74,7 +66,7 @@ const Homepage = () => {
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button 
-              variant="ai-outline" 
+              variant="outline" 
               size="lg" 
               className="text-lg px-8 py-4"
             >
@@ -98,8 +90,8 @@ const Homepage = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="bg-chat-surface border-message-border p-8 hover:shadow-shadow-elegant transition-all duration-300 hover:scale-105">
-                <feature.icon className="h-12 w-12 text-ai-primary mb-6" />
+              <Card key={index} className="bg-card border-border p-8 hover:shadow-sm transition-all duration-300 hover:scale-105">
+                <feature.icon className="h-12 w-12 text-primary mb-6" />
                 <h3 className="text-xl font-semibold text-foreground mb-4">
                   {feature.title}
                 </h3>
@@ -113,7 +105,7 @@ const Homepage = () => {
       </section>
 
       {/* Speed Section */}
-      <section className="py-20 px-6 bg-gradient-to-r from-ai-primary/10 to-ai-secondary/10">
+      <section className="py-20 px-6 bg-secondary/20">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-8">
             3-10 Seconds Per Image
@@ -124,15 +116,15 @@ const Homepage = () => {
           
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="text-3xl font-bold text-ai-primary mb-2">3s</div>
+              <div className="text-3xl font-bold text-primary mb-2">3s</div>
               <div className="text-muted-foreground">Minimum Time</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-ai-primary mb-2">10s</div>
+              <div className="text-3xl font-bold text-primary mb-2">10s</div>
               <div className="text-muted-foreground">Maximum Time</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-ai-primary mb-2">6x</div>
+              <div className="text-3xl font-bold text-primary mb-2">6x</div>
               <div className="text-muted-foreground">Faster Than Competition</div>
             </div>
           </div>
@@ -150,9 +142,8 @@ const Homepage = () => {
           </p>
           
           <Button 
-            variant="ai" 
             size="lg" 
-            className="text-xl px-12 py-6 animate-pulse-glow"
+            className="text-xl px-12 py-6"
             onClick={() => navigate('/auth')}
           >
             Start Your Journey Now
@@ -166,7 +157,7 @@ const Homepage = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 bg-chat-surface border-t border-message-border">
+      <footer className="py-12 px-6 bg-secondary/10 border-t border-border">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-muted-foreground">
             © 2024 AI Image Generator. All rights reserved.

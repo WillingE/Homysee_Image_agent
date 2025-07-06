@@ -51,7 +51,9 @@ const ImageEditor = ({
     });
 
     // Load the image
-    FabricImage.fromURL(imageUrl).then((img) => {
+    FabricImage.fromURL(imageUrl, {
+      crossOrigin: 'anonymous'
+    }).then((img) => {
       if (!img) return;
       
       // Scale image to fit canvas while maintaining aspect ratio
@@ -72,10 +74,10 @@ const ImageEditor = ({
         originY: 'center',
         scaleX: scale,
         scaleY: scale,
-        cornerColor: 'rgba(59, 130, 246, 0.8)',
+        cornerColor: 'rgba(12, 127, 242, 0.8)',
         cornerSize: 12,
         transparentCorners: false,
-        borderColor: 'rgb(59, 130, 246)',
+        borderColor: 'rgb(12, 127, 242)',
         borderOpacityWhenMoving: 0.8,
       });
       
@@ -194,10 +196,10 @@ const ImageEditor = ({
         <div className="flex-1 flex gap-4 min-h-0">
           {/* Canvas Area */}
           <div className="flex-1 flex flex-col">
-            <Card className="flex-1 p-4 flex items-center justify-center bg-muted/30">
+            <Card className="flex-1 p-4 flex items-center justify-center bg-background">
               <canvas 
                 ref={canvasRef} 
-                className="border border-border rounded-lg shadow-sm bg-background"
+                className="border border-border rounded-lg shadow-none bg-background"
               />
             </Card>
             
@@ -275,7 +277,7 @@ const ImageEditor = ({
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
-            <Button onClick={handleApply} className="bg-ai-primary hover:bg-ai-primary-dark">
+            <Button onClick={handleApply} className="bg-primary hover:bg-primary/90">
               <Check className="w-4 h-4 mr-2" />
               Apply Changes
             </Button>

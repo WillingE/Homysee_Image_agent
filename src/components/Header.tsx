@@ -32,18 +32,12 @@ const Header = ({ className }: HeaderProps) => {
   };
 
   return (
-    <header className={`bg-chat-surface border-b border-message-border ${className}`}>
+    <header className={`bg-background border-b border-border ${className}`}>
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo & Brand */}
-        <div className="flex items-center gap-4">
-          {/* Homywork Logo */}
-          <img src={homyworkLogo} alt="Homywork Logo" className="h-10" />
-          <div className="flex flex-col">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">AI Image Studio</h1>
-            <div className="h-px w-full bg-gradient-to-r from-ai-primary via-ai-accent to-transparent opacity-60"></div>
-          </div>
+        <div className="flex items-center min-w-[180px]">
+          <span className="text-2xl font-bold text-foreground">AI Image Studio</span>
         </div>
-
         {/* Status & Actions */}
         <div className="flex items-center gap-4">
           {/* AI Status */}
@@ -51,30 +45,28 @@ const Header = ({ className }: HeaderProps) => {
             <div className="w-2 h-2 bg-status-success rounded-full mr-2 animate-pulse"></div>
             AI Ready
           </Badge>
-
           {/* Quick Actions */}
           <div className="hidden md:flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-ai-primary">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
               <Zap className="w-4 h-4 mr-2" />
               New Chat
             </Button>
           </div>
-
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                <Avatar className="h-10 w-10 ring-2 ring-ai-primary/20">
-                  <AvatarFallback className="bg-gradient-to-br from-ai-primary/20 to-ai-secondary/20 text-foreground">
+                <Avatar className="h-10 w-10 ring-2 ring-primary/20">
+                  <AvatarFallback className="bg-secondary text-foreground">
                     U
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-popover border-message-border" align="end">
+            <DropdownMenuContent className="w-56 bg-popover border-border" align="end">
               <div className="flex items-center justify-start gap-2 p-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-gradient-to-br from-ai-primary/20 to-ai-secondary/20 text-foreground text-sm">
+                  <AvatarFallback className="bg-secondary text-foreground text-sm">
                     U
                   </AvatarFallback>
                 </Avatar>
@@ -85,16 +77,16 @@ const Header = ({ className }: HeaderProps) => {
                   </p>
                 </div>
               </div>
-              <DropdownMenuSeparator className="bg-message-border" />
-              <DropdownMenuItem className="cursor-pointer hover:bg-ai-primary/10">
+              <DropdownMenuSeparator className="bg-border" />
+              <DropdownMenuItem className="cursor-pointer hover:bg-primary/10">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer hover:bg-ai-primary/10">
+              <DropdownMenuItem className="cursor-pointer hover:bg-primary/10">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-message-border" />
+              <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem 
                 onClick={handleSignOut}
                 className="cursor-pointer hover:bg-destructive/10 text-destructive"

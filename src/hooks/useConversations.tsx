@@ -47,6 +47,7 @@ interface ConversationsContextType {
   isImageFavorited: (imageUrl: string) => boolean;
   loadConversations: () => Promise<void>;
   updateConversationThumbnail: (conversationId: string, thumbnailUrl: string) => Promise<void>;
+  loadAllImagesForUser: () => Promise<{ id: string; image_url: string | null; additional_image_urls: string[] | null; }[]>;
 }
 
 // 2. Create the Context
@@ -63,6 +64,11 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
   const [currentImageInfo, setCurrentImageInfo] = useState<any | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // 简单的缓存机制
+  const [conversationsCache, setConversationsCache] = useState<{ [key: string]: Conversation[] }>({});
+  const [messagesCache, setMessagesCache] = useState<{ [key: string]: ChatMessage[] }>({});
+  const [lastLoadTime, setLastLoadTime] = useState<{ [key: string]: number }>({});
 
   const updateMessageInList = (updatedMessage: ChatMessage) => {
     setMessages(prevMessages => 
@@ -70,9 +76,21 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     );
   };
 
-  // 加载用户的所有对话
-  const loadConversations = async () => {
+  // 加载用户的所有对话 - 优化版本，支持分页和缓存
+  const loadConversations = async (page: number = 0, limit: number = 20, forceRefresh: boolean = false) => {
     if (!user) return;
+    
+    const cacheKey = `conversations_${user.id}`;
+    const now = Date.now();
+    const cacheAge = now - (lastLoadTime[cacheKey] || 0);
+    const CACHE_DURATION = 30 * 1000; // 30秒缓存
+    
+    // 如果有缓存且未过期且不强制刷新，使用缓存
+    if (!forceRefresh && page === 0 && conversationsCache[cacheKey] && cacheAge < CACHE_DURATION) {
+      setConversations(conversationsCache[cacheKey]);
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
     try {
@@ -80,10 +98,20 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
         .from('conversations')
         .select('*')
         .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .range(page * limit, (page + 1) * limit - 1);
 
       if (error) throw error;
-      setConversations(data || []);
+      
+      // 如果是第一页，直接设置；否则追加到现有列表
+      if (page === 0) {
+        setConversations(data || []);
+        // 更新缓存
+        setConversationsCache(prev => ({ ...prev, [cacheKey]: data || [] }));
+        setLastLoadTime(prev => ({ ...prev, [cacheKey]: now }));
+      } else {
+        setConversations(prev => [...prev, ...(data || [])]);
+      }
     } catch (error) {
       console.error('Error loading conversations:', error);
       toast({
@@ -218,36 +246,62 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     return result;
   };
 
-  // 加载对话消息
-  const loadMessages = async (conversationId: string) => {
+  // 加载对话消息 - 优化版本，支持分页和缓存
+  const loadMessages = async (conversationId: string, page: number = 0, limit: number = 50, forceRefresh: boolean = false) => {
+    const cacheKey = `messages_${conversationId}`;
+    const now = Date.now();
+    const cacheAge = now - (lastLoadTime[cacheKey] || 0);
+    const CACHE_DURATION = 15 * 1000; // 15秒缓存
+    
+    // 如果有缓存且未过期且不强制刷新，使用缓存
+    if (!forceRefresh && page === 0 && messagesCache[cacheKey] && cacheAge < CACHE_DURATION) {
+      setMessages(messagesCache[cacheKey]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('chat_messages')
         .select('*')
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false }) // 先按降序获取最新消息
+        .range(page * limit, (page + 1) * limit - 1);
 
       if (error) throw error;
+      
       const messagesData = (data || []) as ChatMessage[];
-      setMessages(messagesData);
       
-      await loadFavoriteImages(conversationId);
-      
-      const latestImageMessage = messagesData
-        .filter(msg => msg.image_url)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-      
-      if (latestImageMessage) {
-        setCurrentImage(latestImageMessage.image_url);
-        setCurrentImageInfo({
-          messageId: latestImageMessage.id,
-          timestamp: latestImageMessage.created_at,
-          role: latestImageMessage.role,
-          conversationTitle: currentConversation?.title
-        });
+      // 如果是第一页，直接设置（按升序排列）；否则在开头插入旧消息
+      if (page === 0) {
+        const reversedMessages = messagesData.reverse(); // 反转为升序显示
+        setMessages(reversedMessages);
+        // 更新缓存
+        setMessagesCache(prev => ({ ...prev, [cacheKey]: reversedMessages }));
+        setLastLoadTime(prev => ({ ...prev, [cacheKey]: now }));
       } else {
-        setCurrentImage(null);
-        setCurrentImageInfo(null);
+        setMessages(prev => [...messagesData.reverse(), ...prev]);
+      }
+      
+      // 只在第一页时加载收藏图片和设置当前图片
+      if (page === 0) {
+        await loadFavoriteImages(conversationId);
+        
+        const latestImageMessage = messagesData
+          .filter(msg => msg.image_url)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+        
+        if (latestImageMessage) {
+          setCurrentImage(latestImageMessage.image_url);
+          setCurrentImageInfo({
+            messageId: latestImageMessage.id,
+            timestamp: latestImageMessage.created_at,
+            role: latestImageMessage.role,
+            conversationTitle: currentConversation?.title
+          });
+        } else {
+          setCurrentImage(null);
+          setCurrentImageInfo(null);
+        }
       }
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -379,7 +433,17 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
 
       if (error) throw error;
       
-      setMessages(prev => prev.map(msg => msg.id === tempId ? { ...dbMessage, status: undefined } as ChatMessage : msg));
+      const finalMessage = { ...dbMessage, status: undefined } as ChatMessage;
+      setMessages(prev => prev.map(msg => msg.id === tempId ? finalMessage : msg));
+      
+      // 更新消息缓存
+      const cacheKey = `messages_${conversation.id}`;
+      if (messagesCache[cacheKey]) {
+        setMessagesCache(prev => ({
+          ...prev,
+          [cacheKey]: prev[cacheKey].map(msg => msg.id === tempId ? finalMessage : msg)
+        }));
+      }
 
       return dbMessage as ChatMessage;
     } catch (error) {
@@ -419,8 +483,19 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
 
       if (error) throw error;
       
-      setMessages(prev => [...prev, data as ChatMessage]);
-      return data as ChatMessage;
+      const newMessage = data as ChatMessage;
+      setMessages(prev => [...prev, newMessage]);
+      
+      // 更新消息缓存
+      const cacheKey = `messages_${currentConversation.id}`;
+      if (messagesCache[cacheKey]) {
+        setMessagesCache(prev => ({
+          ...prev,
+          [cacheKey]: [...prev[cacheKey], newMessage]
+        }));
+      }
+      
+      return newMessage;
     } catch (error) {
       console.error('Error adding AI response:', error);
       return null;
@@ -493,7 +568,33 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
       console.error('Error updating conversation thumbnail', error);
     }
   };
-  
+
+  // 新增：批量加载所有图片消息（所有对话）
+  const loadAllImagesForUser = async () => {
+    if (!user) return [];
+    try {
+      // 先查所有对话id
+      const { data: convs, error: convErr } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', user.id);
+      if (convErr) throw convErr;
+      const conversationIds = (convs || []).map((c: any) => c.id);
+      if (conversationIds.length === 0) return [];
+      // 查所有这些对话的消息
+      const { data: msgs, error: msgErr } = await supabase
+        .from('chat_messages')
+        .select('id, image_url, additional_image_urls')
+        .in('conversation_id', conversationIds)
+        .order('created_at', { ascending: false });
+      if (msgErr) throw msgErr;
+      return msgs || [];
+    } catch (e) {
+      console.error('Failed to load all images for user', e);
+      return [];
+    }
+  };
+
   useEffect(() => {
     if (user) {
       loadConversations();
@@ -529,6 +630,7 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     isImageFavorited,
     loadConversations,
     updateConversationThumbnail,
+    loadAllImagesForUser,
   };
 
   return <ConversationsContext.Provider value={value}>{children}</ConversationsContext.Provider>;

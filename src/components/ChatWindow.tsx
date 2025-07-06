@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Send, Image, Upload, Sparkles, Heart, HeartHandshake, X, Loader2, Edit } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import aiAvatar from '@/assets/ai-avatar.jpg';
 import { useConversations, ChatMessage } from '@/hooks/useConversations';
@@ -61,7 +62,8 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     updateCurrentImage,
     favoriteImage,
     unfavoriteImage,
-    isImageFavorited
+    isImageFavorited,
+    loading
   } = useConversations();
   const { uploadImage } = useImageUpload();
   const { toast } = useToast();
@@ -93,6 +95,25 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
     } else {
       await favoriteImage(message, imageUrl);
     }
+  };
+
+  const handleRetryMessage = async (message: ChatMessage) => {
+    if (message.status !== 'failed') return;
+    
+    // 重新发送失败的消息
+    const imageUrls = [
+      ...(message.image_url ? [message.image_url] : []),
+      ...(message.additional_image_urls || [])
+    ];
+    
+    // 先设置输入内容，然后触发发送
+    setInputMessage(message.content);
+    setStagedFiles([]); // 清空暂存文件，因为图片已经上传过了
+    
+    // 延迟一下再发送，让UI更新
+    setTimeout(() => {
+      handleSendMessage();
+    }, 100);
   };
 
   const handleSendMessage = async () => {
@@ -255,41 +276,39 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
   };
 
   return (
-    <Card className={cn('flex flex-col h-full bg-chat-surface border-message-border', className)}>
-      {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b border-message-border bg-gradient-to-r from-ai-primary/10 to-ai-secondary/10">
-        <div className="flex items-center gap-3">
-          <Avatar className="w-10 h-10 ring-2 ring-ai-primary/30">
-            <AvatarImage src={aiAvatar} alt="AI Assistant" />
-            <AvatarFallback className="bg-ai-primary text-primary-foreground">AI</AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="font-semibold text-foreground">AI Image Assistant</h3>
-          </div>
-        </div>
-        <Badge variant="secondary" className="bg-ai-primary/20 text-ai-primary border-ai-primary/30">
-          <Sparkles className="w-3 h-3 mr-1" />
-          Online
-        </Badge>
-      </div>
-
-      {/* Messages Area */}
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-        <div className="space-y-4">
+    <div className={cn('flex flex-col h-full bg-background', className)}>
+      {/* Messages */}
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
+        <div className="space-y-4 pb-4">
           {!currentConversation ? (
             <div className="text-center py-8 text-muted-foreground">
               <p>Start a new conversation to begin</p>
             </div>
+          ) : loading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  {/* 用户消息骨架屏 */}
+                  <div className="flex justify-end">
+                    <div className="max-w-[80%] rounded-lg p-4 bg-secondary/50 animate-pulse">
+                      <Skeleton className="h-4 w-48 bg-secondary" />
+                    </div>
+                  </div>
+                  {/* AI回复骨架屏 */}
+                  <div className="flex justify-start">
+                    <div className="max-w-[320px] space-y-2 animate-pulse">
+                      <Skeleton className="h-48 w-full rounded-2xl bg-secondary" />
+                      <Skeleton className="h-4 w-3/4 bg-secondary" />
+                      <Skeleton className="h-4 w-1/2 bg-secondary" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : messages.length === 0 ? (
             <div className="flex gap-3 animate-fade-in">
-              <Avatar className="w-8 h-8 mt-1">
-                <AvatarImage src={aiAvatar} alt="AI" />
-                <AvatarFallback className="bg-ai-primary text-primary-foreground text-xs">AI</AvatarFallback>
-              </Avatar>
-              <div className="bg-agent-message border border-message-border rounded-lg px-4 py-2 max-w-[80%]">
-                <p className="text-sm leading-relaxed">
-                  Hi! I'm your AI image assistant. I can help with background changes, object removal, and more. Upload an image or describe what you'd like to do!
-                </p>
+              <div className="text-sm leading-relaxed text-foreground">
+                Hi! I'm your AI image assistant. I can help with background changes, object removal, and more. Upload an image or describe what you'd like to do!
               </div>
             </div>
           ) : (
@@ -303,96 +322,152 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
               <div
                 key={message.id}
                 className={cn(
-                  'flex gap-3',
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
+                  'flex flex-col gap-1',
+                  message.role === 'user' ? 'items-end' : 'items-start'
                 )}
               >
-                {message.role === 'assistant' && (
-                  <Avatar className="w-8 h-8 mt-1">
-                    <AvatarImage src={aiAvatar} alt="AI" />
-                    <AvatarFallback className="bg-ai-primary text-primary-foreground text-xs">AI</AvatarFallback>
-                  </Avatar>
-                )}
-                
-                <div
-                  className={cn(
-                    'max-w-[80%] rounded-lg px-4 py-2 shadow-md',
-                    message.role === 'user'
-                      ? 'bg-user-message text-primary-foreground'
-                      : 'bg-agent-message border border-message-border'
-                  )}
-                >
-                  {allImageUrls.length > 0 && (
-                    <div className="mb-2 relative group grid gap-2" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(120px, 1fr))` }}>
-                      {allImageUrls.map((url, index) => (
-                         <div key={index} className="aspect-square bg-agent-message rounded-lg border border-message-border overflow-hidden relative group/image">
-                           <img 
-                             src={url} 
-                             alt={`Uploaded ${index + 1}`}
-                             className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                             onClick={() => handleImageClick(url, message.id)}
-                             title="Click to view large image"
-                           />
-                            <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity flex gap-1">
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               className="h-7 w-7 p-0 rounded-full shadow-md backdrop-blur-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-500 border border-blue-500/50"
-                               onClick={(e) => handleImageEdit(url, message.content, e)}
-                               title="Edit position and size"
-                             >
-                               <Edit className="w-3 h-3" />
-                             </Button>
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               className={cn(
-                                 "h-7 w-7 p-0 rounded-full shadow-md backdrop-blur-sm",
-                                 isImageFavorited(url) 
-                                   ? "bg-red-500/20 hover:bg-red-500/30 text-red-500" 
-                                   : "bg-white/20 hover:bg-white/30 text-white border border-white/50"
-                               )}
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 handleFavoriteClick(message, url);
-                               }}
-                               title={isImageFavorited(url) ? "Unfavorite" : "Favorite"}
-                             >
-                               {isImageFavorited(url) ? (
-                                 <Heart className="w-4 h-4 fill-current" />
-                               ) : (
-                                 <Heart className="w-4 h-4" />
-                               )}
-                             </Button>
-                           </div>
-                         </div>
-                      ))}
-                    </div>
-                  )}
-                  <p className="text-sm leading-relaxed">{message.content}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(message.created_at).toLocaleTimeString()}
-                    </span>
+                {/* 用户图片单独渲染，右对齐 */}
+                {message.role === 'user' && allImageUrls.length > 0 && (
+                  <div className="flex gap-2 justify-end mb-2">
+                    {allImageUrls.map((url, index) => (
+                      <div
+                        key={index}
+                        className="aspect-square overflow-hidden relative group/image flex-shrink-0 w-[120px] h-[120px] bg-transparent border-none rounded-none"
+                        style={{ background: 'none', border: 'none', borderRadius: 0 }}
+                      >
+                        <img 
+                          src={url} 
+                          alt={`Uploaded ${index + 1}`}
+                          className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => handleImageClick(url, message.id)}
+                          title="Click to view large image"
+                        />
+                      </div>
+                    ))}
                   </div>
-                </div>
-
-                {message.role === 'user' && (
-                  <div className="flex items-end">
+                )}
+                {/* 用户文字单独渲染，右对齐，带圆角气泡 */}
+                {message.role === 'user' && message.content && (
+                  <div className={cn(
+                    "max-w-[80%] rounded-lg px-4 py-2 text-foreground shadow-none relative",
+                    message.status === 'sending' ? 'bg-secondary/70' : 'bg-secondary'
+                  )}>
+                    <p className="text-sm leading-relaxed text-foreground">{message.content}</p>
+                    {/* 发送状态指示器 */}
                     {message.status === 'sending' && (
-                      <Loader2 className="w-4 h-4 text-muted-foreground animate-spin mr-2" />
-                    )}
-                    {message.status === 'failed' && (
-                      // Todo: Add a retry mechanism here
-                      <div className="w-4 h-4 text-destructive mr-2" title="Failed to send">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                          <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
-                        </svg>
+                      <div className="absolute -bottom-1 -right-1 flex items-center gap-1 bg-background border border-border rounded-full px-2 py-1">
+                        <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                        <span className="text-xs text-muted-foreground">发送中</span>
                       </div>
                     )}
-                    <Avatar className="w-8 h-8">
-                      <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">U</AvatarFallback>
-                    </Avatar>
+                    {message.status === 'failed' && (
+                      <div className="absolute -bottom-1 -right-1 flex items-center gap-1 bg-destructive/10 border border-destructive/20 rounded-full px-2 py-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto w-auto p-0 text-destructive hover:text-destructive/80"
+                          onClick={() => handleRetryMessage(message)}
+                          title="重试发送"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                        <span className="text-xs text-destructive">失败</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* AI消息和图片美化展示 */}
+                {message.role !== 'user' && allImageUrls.length > 0 ? (
+                  <div className="flex flex-col items-start w-full mb-8">
+                    {/* 大图展示 */}
+                    <div className="w-full flex justify-start">
+                      <div className="relative max-w-[320px] w-full">
+                        <img
+                          src={allImageUrls[0]}
+                          alt="AI生成图片"
+                          className="w-full rounded-2xl object-cover"
+                          style={{ background: '#fff' }}
+                          onClick={() => handleImageClick(allImageUrls[0], message.id)}
+                        />
+                        {/* 收藏按钮 */}
+                        <div className="absolute top-2 right-2 z-10">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                              'rounded-full bg-white/80 hover:bg-white/90 border border-border shadow',
+                              isImageFavorited(allImageUrls[0]) ? 'text-destructive' : 'text-muted-foreground'
+                            )}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFavoriteClick(message, allImageUrls[0]);
+                            }}
+                            title={isImageFavorited(allImageUrls[0]) ? '取消收藏' : '收藏'}
+                          >
+                            <Heart className={cn('w-5 h-5', isImageFavorited(allImageUrls[0]) ? 'fill-current' : '')} />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    {/* 文字描述 */}
+                    {message.content && (
+                      <div className="w-full text-base text-foreground text-left mt-2">{message.content}</div>
+                    )}
+                  </div>
+                ) : message.role !== 'user' && (
+                  <div className="flex flex-col items-start">
+                    {allImageUrls.length > 0 && (
+                      <div className="mb-2 relative group grid gap-2" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(120px, 1fr))` }}>
+                        {allImageUrls.map((url, index) => (
+                          <div key={index} className="aspect-square bg-secondary rounded-lg border border-border overflow-hidden relative group/image w-[120px] h-[120px]">
+                            <img 
+                              src={url} 
+                              alt={`Uploaded ${index + 1}`}
+                              className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => handleImageClick(url, message.id)}
+                              title="Click to view large image"
+                            />
+                            <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 rounded-full shadow-md backdrop-blur-sm bg-primary/20 hover:bg-primary/30 text-primary border border-primary/50"
+                                onClick={(e) => handleImageEdit(url, message.content, e)}
+                                title="Edit position and size"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={cn(
+                                  "h-7 w-7 p-0 rounded-full shadow-md backdrop-blur-sm",
+                                  isImageFavorited(url) 
+                                    ? "bg-destructive/20 hover:bg-destructive/30 text-destructive"
+                                    : "bg-foreground/20 hover:bg-foreground/30 text-foreground border border-foreground/50"
+                                )}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFavoriteClick(message, url);
+                                }}
+                                title={isImageFavorited(url) ? "Unfavorite" : "Favorite"}
+                              >
+                                {isImageFavorited(url) ? (
+                                  <Heart className="w-4 h-4 fill-current" />
+                                ) : (
+                                  <Heart className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {message.content && (
+                      <div className="max-w-[80%] px-0 py-0 bg-transparent border-none shadow-none text-foreground">
+                        <p className="text-sm leading-relaxed text-foreground">{message.content}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -401,16 +476,12 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
           
           {isLoading && (
             <div className="flex gap-3 animate-fade-in">
-              <Avatar className="w-8 h-8 mt-1">
-                <AvatarImage src={aiAvatar} alt="AI" />
-                <AvatarFallback className="bg-ai-primary text-primary-foreground text-xs">AI</AvatarFallback>
-              </Avatar>
-              <div className="bg-agent-message border border-message-border rounded-lg px-4 py-2 max-w-[80%]">
+              <div className="px-0 py-0 bg-transparent border-none shadow-none text-foreground">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-ai-primary rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-ai-primary rounded-full animate-bounce [animation-delay:0.1s]"></div>
-                    <div className="w-2 h-2 bg-ai-primary rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.1s]"></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.2s]"></div>
                   </div>
                   <span className="text-sm text-muted-foreground">AI is thinking...</span>
                 </div>
@@ -421,88 +492,95 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="p-4 border-t border-message-border bg-gradient-to-r from-chat-surface to-agent-message">
-        {stagedFiles.length > 0 && (
-          <div className="mb-2 p-2 border-b border-message-border">
-              <div className="flex gap-2 pb-2">
+      <div className="p-4 bg-background flex justify-center">
+        <div className="w-full max-w-3xl">
+          {stagedFiles.length > 0 && (
+            <div className="mb-3 p-3 border border-border rounded-lg bg-secondary/50">
+              <div className="flex gap-2">
                 {stagedFiles.map((file, index) => (
                   <StagedImagePreview key={index} file={file} onRemove={handleRemoveStagedImage} />
                 ))}
               </div>
-          </div>
-        )}
-        <div className="flex gap-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageUpload}
-            accept="image/*"
-            className="hidden"
-          />
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 border-message-border hover:bg-ai-primary/20 hover:border-ai-primary/30"
-          >
-            <Upload className="w-4 h-4" />
-          </Button>
+            </div>
+          )}
           
-          <div className="flex-1 relative">
-            <Input
-              id="chat-input"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Describe your image editing needs..."
-              className="pr-12 bg-input border-message-border focus:border-ai-primary/50 focus:ring-ai-primary/30"
+          <div className="space-y-3">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageUpload}
+              accept="image/*"
+              className="hidden"
             />
-            <Button
-              onClick={handleSendMessage}
-              disabled={(!inputMessage.trim() && stagedFiles.length === 0) || isSending || isLoading}
-              size="icon"
-              className="absolute right-1 top-1 h-8 w-8 bg-ai-primary hover:bg-ai-primary-dark"
+            
+            <div className="relative">
+              <Input
+                id="chat-input"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Describe your image editing needs..."
+                className="bg-background border border-border focus:border-primary/50 focus:ring-primary/30 rounded-xl py-3 px-4 min-h-[48px]"
+              />
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                className="shrink-0 border-border hover:bg-primary/20 hover:border-primary/30"
+              >
+                <Upload className="w-4 h-4" />
+              </Button>
+              
+              <Button
+                onClick={handleSendMessage}
+                disabled={(!inputMessage.trim() && stagedFiles.length === 0) || isSending || isLoading}
+                size="icon"
+                className="h-8 w-8 bg-primary hover:bg-primary/90 rounded-lg"
+              >
+                {isSending || isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 mt-3 justify-center">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs text-muted-foreground hover:text-primary rounded-full"
+              onClick={() => {
+                setInputMessage('Change background to: ');
+                document.getElementById('chat-input')?.focus();
+              }}
             >
-              {isSending || isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              <Image className="w-3 h-3 mr-1" />
+              Change BG
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs text-muted-foreground hover:text-primary rounded-full"
+              onClick={() => {
+                setInputMessage('Remove object: ');
+                document.getElementById('chat-input')?.focus();
+              }}
+            >
+              Remove Object
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs text-muted-foreground hover:text-primary rounded-full"
+              onClick={() => {
+                setInputMessage('Add element: ');
+                document.getElementById('chat-input')?.focus();
+              }}
+            >
+              Add Element
             </Button>
           </div>
-        </div>
-        
-        <div className="flex gap-2 mt-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-xs text-muted-foreground hover:text-ai-primary"
-            onClick={() => {
-              setInputMessage('Change background to: ');
-              document.getElementById('chat-input')?.focus();
-            }}
-          >
-            <Image className="w-3 h-3 mr-1" />
-            Change BG
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-xs text-muted-foreground hover:text-ai-primary"
-            onClick={() => {
-              setInputMessage('Remove object: ');
-              document.getElementById('chat-input')?.focus();
-            }}
-          >
-            Remove Object
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-xs text-muted-foreground hover:text-ai-primary"
-            onClick={() => {
-              setInputMessage('Add element: ');
-              document.getElementById('chat-input')?.focus();
-            }}
-          >
-            Add Element
-          </Button>
         </div>
       </div>
 
@@ -522,7 +600,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
         onApply={handleApplyImageEdit}
         originalPrompt={currentEditPrompt}
       />
-    </Card>
+    </div>
   );
 };
 

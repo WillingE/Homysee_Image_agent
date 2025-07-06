@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Download, Heart, Loader2 } from 'lucide-react';
+import { Download, Heart, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useConversations } from '@/hooks/useConversations';
 import { useToast } from '@/hooks/use-toast';
@@ -12,9 +12,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface ImagePreviewProps {
   className?: string;
+  onCollapse?: (collapsed: boolean) => void;
 }
 
-const ImagePreview = ({ className }: ImagePreviewProps) => {
+const ImagePreview = ({ className, onCollapse }: ImagePreviewProps) => {
   const {
     currentConversation,
     favoriteImages,
@@ -24,6 +25,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isZipping, setIsZipping] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const { toast } = useToast();
 
   const handleDownload = (imageUrl: string) => {
@@ -92,12 +94,30 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
     }
   };
 
+  // 折叠时只显示一个小按钮
+  if (collapsed) {
+    if (onCollapse) onCollapse(true);
+    return (
+      <div className="fixed top-1/2 right-0 z-50 transform -translate-y-1/2">
+        <Button
+          variant="secondary"
+          size="icon"
+          className="rounded-l-none rounded-r-full shadow"
+          onClick={() => setCollapsed(false)}
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </Button>
+      </div>
+    );
+  }
+  if (onCollapse) onCollapse(false);
+
   return (
-    <Card className={cn('flex flex-col h-full bg-chat-surface border-message-border', className)}>
+    <Card className={cn('flex flex-col h-full bg-card border-border transition-all duration-300', className)}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-message-border bg-gradient-to-r from-ai-secondary/10 to-ai-accent/10">
+      <div className="flex items-center justify-between p-4 border-b border-border bg-secondary/20">
         <div className="flex items-center gap-2">
-          <Heart className="w-5 h-5 text-ai-secondary" />
+          <Heart className="w-5 h-5 text-primary" />
           <h3 className="font-semibold text-foreground">Favorite Images</h3>
         </div>
         <div className="flex items-center gap-2">
@@ -116,9 +136,19 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
               {isZipping ? 'Zipping...' : 'Download All'}
             </Button>
           )}
-          <Badge variant="outline" className="text-xs border-ai-secondary/30 text-ai-secondary">
+          <Badge variant="secondary" className="text-xs">
             {favoriteImages.length} {favoriteImages.length === 1 ? 'image' : 'images'}
           </Badge>
+          {/* 折叠按钮 */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-2"
+            onClick={() => setCollapsed(true)}
+            title="收起收藏区"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </Button>
         </div>
       </div>
 
@@ -135,8 +165,8 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
           </div>
         ) : favoriteImages.length === 0 ? (
           <div className="p-4 h-full flex flex-col items-center justify-center text-center space-y-4">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-ai-primary/20 to-ai-secondary/20 flex items-center justify-center">
-              <Heart className="w-12 h-12 text-ai-primary" />
+            <div className="w-24 h-24 rounded-full bg-secondary flex items-center justify-center">
+              <Heart className="w-12 h-12 text-primary" />
             </div>
             <div className="space-y-2">
               <h4 className="text-lg font-semibold text-foreground">No Favorite Images</h4>
@@ -150,7 +180,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
             <div className="grid grid-cols-1 gap-4 p-4">
               {favoriteImages.map((image) => (
                 <div key={image.id} className="relative group">
-                  <div className="aspect-square bg-agent-message rounded-lg border border-message-border overflow-hidden">
+                  <div className="aspect-square bg-secondary rounded-lg border border-border overflow-hidden">
                     <img 
                       src={image.image_url} 
                       alt="Favorite" 
@@ -167,7 +197,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 rounded-full shadow-md backdrop-blur-sm bg-white/20 hover:bg-white/30 text-white"
+                      className="h-8 w-8 p-0 rounded-full bg-background/80 hover:bg-background/90 backdrop-blur-sm"
                       onClick={() => handleDownload(image.image_url)}
                       title="Download image"
                     >
@@ -176,7 +206,7 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 rounded-full shadow-md backdrop-blur-sm bg-red-500/20 hover:bg-red-500/30 text-red-500"
+                      className="h-8 w-8 p-0 rounded-full bg-red-500/80 hover:bg-red-500/90 backdrop-blur-sm text-white"
                       onClick={() => unfavoriteImage(image.image_url)}
                       title="Unfavorite"
                     >
@@ -209,13 +239,13 @@ const ImagePreview = ({ className }: ImagePreviewProps) => {
       </div>
 
       {/* Status Bar */}
-      <div className="p-3 border-t border-message-border bg-gradient-to-r from-agent-message to-chat-surface">
+      <div className="p-3 border-t border-border bg-secondary/10">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>
             {currentConversation?.title ? `Favorites from "${currentConversation.title}"` : 'Favorites from current chat'}
           </span>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-status-success rounded-full"></div>
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
             <span>Connected</span>
           </div>
         </div>

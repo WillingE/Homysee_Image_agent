@@ -2,92 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
-/* AI Image Agent Design System - Modern & Intelligent */
+/* Stitch Design System - Light & Clean */
 
 @layer base {
   :root {
-    /* AI-themed color palette */
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    /* UI-themed color palette from Stitch Design */
+    --background: 220 12% 96%; /* Equivalent to slate-50 */
+    --foreground: 210 10% 8%;  /* Equivalent to #0d141c */
     
-    /* AI Agent primary colors - Deep purple/blue theme */
-    --ai-primary: 263 70% 50%;
-    --ai-primary-light: 263 70% 60%;
-    --ai-primary-dark: 263 70% 40%;
-    --ai-secondary: 280 100% 70%;
-    --ai-accent: 200 100% 70%;
+    --primary: 209 90% 49%;    /* Equivalent to #0c7ff2 */
+    --primary-foreground: 220 12% 96%; /* White equivalent */
     
-    /* Chat interface colors */
-    --chat-background: 240 10% 4.5%;
-    --chat-surface: 240 5% 6%;
-    --user-message: 263 70% 50%;
-    --agent-message: 240 5% 8%;
-    --message-border: 240 5% 12%;
-    
-    /* Status colors for image processing */
+    --secondary: 210 20% 93%;  /* Equivalent to #e7edf4 */
+    --secondary-foreground: 210 10% 8%; /* Dark text */
+
+    --muted: 210 20% 93%;      /* Similar to secondary for muted backgrounds */
+    --muted-foreground: 209 28% 44%; /* Equivalent to #49739c */
+
+    --accent: 209 90% 49%;     /* Using primary for accent as well if needed */
+    --accent-foreground: 220 12% 96%;
+
+    --destructive: 0 84% 60%; /* Keep existing for errors */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 210 20% 88%;    /* Slightly darker for subtle borders */
+    --input: 210 20% 93%;     /* Same as secondary */
+    --ring: 209 90% 49%;      /* Same as primary */
+
+    --radius: 0.5rem; /* For rounded-lg */
+
+    /* Chat interface colors based on Stitch Design */
+    --chat-background: 220 12% 96%;
+    --chat-surface: 220 12% 96%;
+    --user-message: 220 12% 96%; /* User messages will have light background */
+    --agent-message: 210 20% 93%; /* Agent messages will have a slightly darker background */
+    --message-border: 210 20% 88%;
+
+    /* Status colors (保持不变) */
     --status-processing: 45 100% 60%;
     --status-success: 120 100% 40%;
     --status-error: 0 84% 60%;
-    
-    /* Gradients for modern AI feel */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--ai-primary)), hsl(var(--ai-secondary)));
-    --gradient-surface: linear-gradient(135deg, hsl(var(--chat-surface)), hsl(240 5% 8%));
-    --gradient-glow: radial-gradient(circle at center, hsl(var(--ai-primary) / 0.15), transparent 70%);
-    
-    /* Enhanced shadows with AI glow */
-    --shadow-elegant: 0 8px 32px hsl(var(--ai-primary) / 0.12);
-    --shadow-glow: 0 0 40px hsl(var(--ai-primary) / 0.25);
-    --shadow-surface: 0 4px 16px hsl(240 10% 2% / 0.4);
-    
-    /* Animation transitions */
+
+    /* Animation transitions (保持不变) */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    /* Updated semantic tokens for dark theme */
-    --card: 240 5% 6%;
-    --card-foreground: 0 0% 98%;
+    --card: 220 12% 96%;
+    --card-foreground: 210 10% 8%;
 
-    --popover: 240 5% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 220 12% 96%;
+    --popover-foreground: 210 10% 8%;
 
-    --primary: 263 70% 50%;
-    --primary-foreground: 0 0% 98%;
-
-    --secondary: 240 5% 8%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 240 5% 10%;
-    --muted-foreground: 240 5% 65%;
-
-    --accent: 200 100% 70%;
-    --accent-foreground: 240 10% 10%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 240 5% 12%;
-    --input: 240 5% 8%;
-    --ring: 263 70% 50%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 220 12% 96%;
+    --sidebar-foreground: 210 10% 8%;
+    --sidebar-primary: 209 90% 49%;
+    --sidebar-primary-foreground: 220 12% 96%;
+    --sidebar-accent: 210 20% 93%;
+    --sidebar-accent-foreground: 210 10% 8%;
+    --sidebar-border: 210 20% 88%;
+    --sidebar-ring: 209 90% 49%;
   }
 
+  /* Dark mode configuration (可以保持现有或根据Stitch Design的深色模式进行调整) */
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -130,6 +106,11 @@
 @layer base {
   * {
     @apply border-border;
+  }
+
+  html {
+    /* 设置新的字体家族 */
+    font-family: "Spline Sans", "Noto Sans", sans-serif;
   }
 
   body {
