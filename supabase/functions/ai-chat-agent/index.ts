@@ -206,66 +206,66 @@ serve(async (req) => {
         }
         // 有图片时校验格式
         if (typeof actualImageUrl === 'string' && !actualImageUrl.startsWith('http')) {
-          console.error("❌ Invalid image URL format:", actualImageUrl);
-          responseContent += `\n\n抱歉，图片URL格式无效。请重新上传图片后再试。`;
-          actualImageUrl = null;
+            console.error("❌ Invalid image URL format:", actualImageUrl);
+            responseContent += `\n\n抱歉，图片URL格式无效。请重新上传图片后再试。`;
+            actualImageUrl = null;
         }
         
         // 无论是否有图片，都调用处理服务（后端会根据是否有图片决定修图还是生图）
-        const imageProcessingResponse = await fetch(`${supabaseUrl}/functions/v1/image-processing`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+          const imageProcessingResponse = await fetch(`${supabaseUrl}/functions/v1/image-processing`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
             original_image_url: actualImageUrl,  // 允许为null，后端需支持生图
-            prompt: args.prompt,
-            conversation_id: conversationId,
-            user_id: userId
-          }),
-        });
+              prompt: args.prompt,
+              conversation_id: conversationId,
+              user_id: userId
+            }),
+          });
 
-        if (imageProcessingResponse.ok) {
-          const imageResult = await imageProcessingResponse.json();
-          console.log("✅ Image processing result:", imageResult);
-          
-          if (imageResult.status === 'completed' && imageResult.processed_image_url) {
-            // 🎉 图片处理已完成！直接返回处理后的图片
-            processedImageUrl = imageResult.processed_image_url;
+          if (imageProcessingResponse.ok) {
+            const imageResult = await imageProcessingResponse.json();
+            console.log("✅ Image processing result:", imageResult);
+            
+            if (imageResult.status === 'completed' && imageResult.processed_image_url) {
+              // 🎉 图片处理已完成！直接返回处理后的图片
+              processedImageUrl = imageResult.processed_image_url;
             if (actualImageUrl) {
               responseContent += `\n\n🎉 图片处理完成！`;
             } else {
               responseContent += `\n\n🎉 图片生成完成！`;
             }
-            
-            console.log("✅ Image processing completed immediately:", processedImageUrl);
-          } else if (imageResult.status === 'failed') {
-            // 处理失败
-            responseContent += `\n\n❌ 图片处理失败：${imageResult.error || '未知错误'}`;
-            console.error("❌ Image processing failed:", imageResult.error);
-          } else {
-            // 备用：如果仍然返回task_id（不应该发生）
-            processedImageUrl = imageResult.task_id;
-            responseContent += `\n\n⏳ 图片正在处理中，请稍候...`;
-            console.log("⚠️ Unexpected: Still got task_id:", imageResult.task_id);
-          }
-        } else {
-          const errorText = await imageProcessingResponse.text();
-          console.error("❌ Image processing service error:", imageProcessingResponse.status, errorText);
-          
-          // 解析错误响应
-          let errorMessage = '图片处理服务暂时不可用';
-          try {
-            const errorData = JSON.parse(errorText);
-            if (errorData.error) {
-              errorMessage = errorData.error;
+              
+              console.log("✅ Image processing completed immediately:", processedImageUrl);
+            } else if (imageResult.status === 'failed') {
+              // 处理失败
+              responseContent += `\n\n❌ 图片处理失败：${imageResult.error || '未知错误'}`;
+              console.error("❌ Image processing failed:", imageResult.error);
+            } else {
+              // 备用：如果仍然返回task_id（不应该发生）
+              processedImageUrl = imageResult.task_id;
+              responseContent += `\n\n⏳ 图片正在处理中，请稍候...`;
+              console.log("⚠️ Unexpected: Still got task_id:", imageResult.task_id);
             }
-          } catch (parseError) {
-            console.error("Error parsing error response:", parseError);
-          }
-          
-          responseContent += `\n\n❌ 图片处理失败：${errorMessage}`;
+          } else {
+            const errorText = await imageProcessingResponse.text();
+            console.error("❌ Image processing service error:", imageProcessingResponse.status, errorText);
+            
+            // 解析错误响应
+            let errorMessage = '图片处理服务暂时不可用';
+            try {
+              const errorData = JSON.parse(errorText);
+              if (errorData.error) {
+                errorMessage = errorData.error;
+              }
+            } catch (parseError) {
+              console.error("Error parsing error response:", parseError);
+            }
+            
+            responseContent += `\n\n❌ 图片处理失败：${errorMessage}`;
         }
       }
     }

@@ -308,7 +308,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
           ) : messages.length === 0 ? (
             <div className="flex gap-3 animate-fade-in">
               <div className="text-sm leading-relaxed text-foreground">
-                Hi! I'm your AI image assistant. I can help with background changes, object removal, and more. Upload an image or describe what you'd like to do!
+                  Hi! I'm your AI image assistant. I can help with background changes, object removal, and more. Upload an image or describe what you'd like to do!
               </div>
             </div>
           ) : (
@@ -394,7 +394,7 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className={cn(
+                  className={cn(
                               'rounded-full bg-white/80 hover:bg-white/90 border border-border shadow',
                               isImageFavorited(allImageUrls[0]) ? 'text-destructive' : 'text-muted-foreground'
                             )}
@@ -416,17 +416,17 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                   </div>
                 ) : message.role !== 'user' && (
                   <div className="flex flex-col items-start">
-                    {allImageUrls.length > 0 && (
-                      <div className="mb-2 relative group grid gap-2" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(120px, 1fr))` }}>
-                        {allImageUrls.map((url, index) => (
+                  {allImageUrls.length > 0 && (
+                    <div className="mb-2 relative group grid gap-2" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(120px, 1fr))` }}>
+                      {allImageUrls.map((url, index) => (
                           <div key={index} className="aspect-square bg-secondary rounded-lg border border-border overflow-hidden relative group/image w-[120px] h-[120px]">
-                            <img 
-                              src={url} 
-                              alt={`Uploaded ${index + 1}`}
-                              className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => handleImageClick(url, message.id)}
-                              title="Click to view large image"
-                            />
+                          <img 
+                            src={url} 
+                            alt={`Uploaded ${index + 1}`}
+                            className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => handleImageClick(url, message.id)}
+                            title="Click to view large image"
+                          />
                             <div className="absolute top-1 right-1 opacity-0 group-hover/image:opacity-100 transition-opacity flex gap-1">
                               <Button
                                 variant="ghost"
@@ -437,32 +437,32 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                               >
                                 <Edit className="w-3 h-3" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className={cn(
-                                  "h-7 w-7 p-0 rounded-full shadow-md backdrop-blur-sm",
-                                  isImageFavorited(url) 
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                "h-7 w-7 p-0 rounded-full shadow-md backdrop-blur-sm",
+                                isImageFavorited(url) 
                                     ? "bg-destructive/20 hover:bg-destructive/30 text-destructive"
                                     : "bg-foreground/20 hover:bg-foreground/30 text-foreground border border-foreground/50"
-                                )}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleFavoriteClick(message, url);
-                                }}
-                                title={isImageFavorited(url) ? "Unfavorite" : "Favorite"}
-                              >
-                                {isImageFavorited(url) ? (
-                                  <Heart className="w-4 h-4 fill-current" />
-                                ) : (
-                                  <Heart className="w-4 h-4" />
-                                )}
-                              </Button>
-                            </div>
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFavoriteClick(message, url);
+                              }}
+                              title={isImageFavorited(url) ? "Unfavorite" : "Favorite"}
+                            >
+                              {isImageFavorited(url) ? (
+                                <Heart className="w-4 h-4 fill-current" />
+                              ) : (
+                                <Heart className="w-4 h-4" />
+                              )}
+                            </Button>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                     {message.content && (
                       <div className="max-w-[80%] px-0 py-0 bg-transparent border-none shadow-none text-foreground">
                         <p className="text-sm leading-relaxed text-foreground">{message.content}</p>
@@ -494,32 +494,32 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
       {/* Input Area */}
       <div className="p-4 bg-background flex justify-center">
         <div className="w-full max-w-3xl">
-          {stagedFiles.length > 0 && (
+        {stagedFiles.length > 0 && (
             <div className="mb-3 p-3 border border-border rounded-lg bg-secondary/50">
               <div className="flex gap-2">
                 {stagedFiles.map((file, index) => (
                   <StagedImagePreview key={index} file={file} onRemove={handleRemoveStagedImage} />
                 ))}
               </div>
-            </div>
-          )}
+          </div>
+        )}
           
           <div className="space-y-3">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageUpload}
-              accept="image/*"
-              className="hidden"
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            accept="image/*"
+            className="hidden"
             />
-            
+          
             <div className="relative">
-              <Input
-                id="chat-input"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Describe your image editing needs..."
+            <Input
+              id="chat-input"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Describe your image editing needs..."
                 className="bg-background border border-border focus:border-primary/50 focus:ring-primary/30 rounded-xl py-3 px-4 min-h-[48px]"
               />
             </div>
@@ -534,52 +534,52 @@ const ChatWindow = ({ className }: ChatWindowProps) => {
                 <Upload className="w-4 h-4" />
               </Button>
               
-              <Button
-                onClick={handleSendMessage}
-                disabled={(!inputMessage.trim() && stagedFiles.length === 0) || isSending || isLoading}
-                size="icon"
+            <Button
+              onClick={handleSendMessage}
+              disabled={(!inputMessage.trim() && stagedFiles.length === 0) || isSending || isLoading}
+              size="icon"
                 className="h-8 w-8 bg-primary hover:bg-primary/90 rounded-lg"
-              >
-                {isSending || isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </Button>
-            </div>
+            >
+              {isSending || isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </Button>
           </div>
-          
+        </div>
+        
           <div className="flex gap-2 mt-3 justify-center">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+          <Button 
+            variant="ghost" 
+            size="sm" 
               className="text-xs text-muted-foreground hover:text-primary rounded-full"
-              onClick={() => {
-                setInputMessage('Change background to: ');
-                document.getElementById('chat-input')?.focus();
-              }}
-            >
-              <Image className="w-3 h-3 mr-1" />
-              Change BG
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            onClick={() => {
+              setInputMessage('Change background to: ');
+              document.getElementById('chat-input')?.focus();
+            }}
+          >
+            <Image className="w-3 h-3 mr-1" />
+            Change BG
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
               className="text-xs text-muted-foreground hover:text-primary rounded-full"
-              onClick={() => {
-                setInputMessage('Remove object: ');
-                document.getElementById('chat-input')?.focus();
-              }}
-            >
-              Remove Object
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            onClick={() => {
+              setInputMessage('Remove object: ');
+              document.getElementById('chat-input')?.focus();
+            }}
+          >
+            Remove Object
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
               className="text-xs text-muted-foreground hover:text-primary rounded-full"
-              onClick={() => {
-                setInputMessage('Add element: ');
-                document.getElementById('chat-input')?.focus();
-              }}
-            >
-              Add Element
-            </Button>
+            onClick={() => {
+              setInputMessage('Add element: ');
+              document.getElementById('chat-input')?.focus();
+            }}
+          >
+            Add Element
+          </Button>
           </div>
         </div>
       </div>

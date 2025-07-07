@@ -135,7 +135,7 @@ const Sidebar = ({ className, onCollapse, onSelectGallery, onSelectConversation 
           <span>Gallery</span>
         </Button>
       </div>
-      
+
       {/* Conversations List */}
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
@@ -225,7 +225,7 @@ const Sidebar = ({ className, onCollapse, onSelectGallery, onSelectConversation 
           )}
         </div>
       </ScrollArea>
-      
+
       {/* Footer */}
       <div className="p-3 border-t border-border bg-background">
         <div className="flex items-center justify-between text-xs text-muted-foreground">

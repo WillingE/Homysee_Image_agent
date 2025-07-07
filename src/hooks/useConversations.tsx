@@ -48,6 +48,7 @@ interface ConversationsContextType {
   loadConversations: () => Promise<void>;
   updateConversationThumbnail: (conversationId: string, thumbnailUrl: string) => Promise<void>;
   loadAllImagesForUser: () => Promise<{ id: string; image_url: string | null; additional_image_urls: string[] | null; }[]>;
+  loadAllFavoriteImages: () => Promise<FavoriteImage[]>;
 }
 
 // 2. Create the Context
@@ -64,7 +65,7 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
   const [currentImageInfo, setCurrentImageInfo] = useState<any | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   // 简单的缓存机制
   const [conversationsCache, setConversationsCache] = useState<{ [key: string]: Conversation[] }>({});
   const [messagesCache, setMessagesCache] = useState<{ [key: string]: ChatMessage[] }>({});
@@ -105,7 +106,7 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
       
       // 如果是第一页，直接设置；否则追加到现有列表
       if (page === 0) {
-        setConversations(data || []);
+      setConversations(data || []);
         // 更新缓存
         setConversationsCache(prev => ({ ...prev, [cacheKey]: data || [] }));
         setLastLoadTime(prev => ({ ...prev, [cacheKey]: now }));
@@ -284,23 +285,23 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
       
       // 只在第一页时加载收藏图片和设置当前图片
       if (page === 0) {
-        await loadFavoriteImages(conversationId);
-        
-        const latestImageMessage = messagesData
-          .filter(msg => msg.image_url)
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-        
-        if (latestImageMessage) {
-          setCurrentImage(latestImageMessage.image_url);
-          setCurrentImageInfo({
-            messageId: latestImageMessage.id,
-            timestamp: latestImageMessage.created_at,
-            role: latestImageMessage.role,
-            conversationTitle: currentConversation?.title
-          });
-        } else {
-          setCurrentImage(null);
-          setCurrentImageInfo(null);
+      await loadFavoriteImages(conversationId);
+      
+      const latestImageMessage = messagesData
+        .filter(msg => msg.image_url)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+      
+      if (latestImageMessage) {
+        setCurrentImage(latestImageMessage.image_url);
+        setCurrentImageInfo({
+          messageId: latestImageMessage.id,
+          timestamp: latestImageMessage.created_at,
+          role: latestImageMessage.role,
+          conversationTitle: currentConversation?.title
+        });
+      } else {
+        setCurrentImage(null);
+        setCurrentImageInfo(null);
         }
       }
     } catch (error) {
@@ -595,6 +596,31 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     }
   };
 
+  // 新增：加载用户的所有收藏图片
+  const loadAllFavoriteImages = async () => {
+    if (!user) return [];
+    
+    try {
+      const { data, error } = await supabase
+        .from('favorite_images')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        if (error.code === '42P01' || error.message?.includes('relation "public.favorite_images" does not exist')) {
+          console.log('Favorites table not created yet.');
+          return [];
+        }
+        throw error;
+      }
+      return (data || []) as unknown as FavoriteImage[];
+    } catch (error) {
+      console.error('Error loading all favorite images:', error);
+      return [];
+    }
+  };
+  
   useEffect(() => {
     if (user) {
       loadConversations();
@@ -631,6 +657,7 @@ export const ConversationsProvider = ({ children }: { children: ReactNode }) => 
     loadConversations,
     updateConversationThumbnail,
     loadAllImagesForUser,
+    loadAllFavoriteImages,
   };
 
   return <ConversationsContext.Provider value={value}>{children}</ConversationsContext.Provider>;

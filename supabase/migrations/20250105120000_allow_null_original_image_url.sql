@@ -3,6 +3,6 @@
 
 ALTER TABLE public.image_tasks
 ALTER COLUMN original_image_url DROP NOT NULL;
-
+ 
 -- 添加注释说明
 COMMENT ON COLUMN public.image_tasks.original_image_url IS 'Original image URL for editing, can be NULL for text-to-image generation'; 
