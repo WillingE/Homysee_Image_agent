@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRight, Zap, Palette, RotateCcw, Brain, Sparkles, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import heroMainBg from '@/assets/hero-main-bg.jpg';
 
 const Homepage = () => {
   const navigate = useNavigate();
@@ -43,16 +44,21 @@ const Homepage = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center">
+      <section 
+        className="relative h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${heroMainBg})`
+        }}
+      >
         <div className="relative z-10 max-w-4xl mx-auto text-center px-6">
-          <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6">
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
             AI Image Generation
             <span className="block text-primary">
               Made Simple
             </span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-2xl mx-auto">
             Create stunning product images with pure conversation. No complex tools, no waiting - just describe what you want.
           </p>
           
