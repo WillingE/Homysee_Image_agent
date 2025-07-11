@@ -79,6 +79,66 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_config: {
+        Row: {
+          config_key: string
+          config_value: string
+          created_at: string
+          description: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          config_key: string
+          config_value: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          config_key?: string
+          config_value?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          reference_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       favorite_images: {
         Row: {
           conversation_id: string
@@ -195,12 +255,107 @@ export type Database = {
         }
         Relationships: []
       }
+      user_credits: {
+        Row: {
+          created_at: string
+          current_balance: number
+          id: string
+          total_earned: number
+          total_spent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_balance?: number
+          id?: string
+          total_earned?: number
+          total_spent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_balance?: number
+          id?: string
+          total_earned?: number
+          total_spent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_user_to_credits: {
+        Args: { target_user_id: string } | { user_email: string }
+        Returns: boolean
+      }
+      ensure_all_users_have_credits: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_all_users_with_credits: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          email: string
+          username: string
+          current_balance: number
+          total_earned: number
+          total_spent: number
+          credit_created_at: string
+          credit_updated_at: string
+        }[]
+      }
+      get_user_credit_balance: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
+      get_users_from_credits: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          email: string
+          username: string
+          current_balance: number
+          total_earned: number
+          total_spent: number
+          credit_created_at: string
+          credit_updated_at: string
+        }[]
+      }
+      is_super_admin: {
+        Args: { p_user_id?: string }
+        Returns: boolean
+      }
+      search_users_with_credits: {
+        Args: { search_term: string }
+        Returns: {
+          user_id: string
+          email: string
+          username: string
+          current_balance: number
+          total_earned: number
+          total_spent: number
+          credit_created_at: string
+          credit_updated_at: string
+        }[]
+      }
+      update_user_credit_balance: {
+        Args: {
+          p_user_id: string
+          p_amount: number
+          p_transaction_type: string
+          p_description?: string
+          p_reference_id?: string
+          p_created_by?: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

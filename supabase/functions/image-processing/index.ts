@@ -50,6 +50,35 @@ serve(async (req) => {
       );
     }
 
+    // Check user credit balance
+    const { data: creditBalance, error: creditError } = await supabase
+      .rpc('get_user_credit_balance', { p_user_id: user_id });
+
+    if (creditError) {
+      console.error("Error checking credit balance:", creditError);
+      return new Response(
+        JSON.stringify({ 
+          error: "Failed to check credit balance" 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+
+    if (creditBalance < 1) {
+      console.log("Insufficient credits:", creditBalance);
+      return new Response(
+        JSON.stringify({ 
+          error: "Insufficient credits. Need 1 credit to generate image.",
+          current_balance: creditBalance
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 402, // Payment Required
+        }
+      );
+    }
+
     // Validate prompt length
     if (prompt.length > 500) {
       return new Response(
@@ -176,6 +205,20 @@ serve(async (req) => {
       if (prediction.output && !prediction.error) {
         const processedImageUrl = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
         
+        // Deduct 1 credit from user balance
+        const { error: deductError } = await supabase
+          .rpc('update_user_credit_balance', {
+            p_user_id: user_id,
+            p_amount: -1,
+            p_transaction_type: 'image_generation',
+            p_description: 'AI image generation'
+          });
+
+        if (deductError) {
+          console.error("Error deducting credits:", deductError);
+          // Continue anyway since image was generated successfully
+        }
+
         // 更新任务状态为完成
         await supabase
           .from('image_tasks')
